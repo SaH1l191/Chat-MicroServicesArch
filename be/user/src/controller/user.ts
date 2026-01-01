@@ -177,7 +177,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     try {
         const refreshToken = req.cookies?.refreshToken;
         if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
-
+ 
         const payload = jwt.verify(
             refreshToken,
             process.env.JWT_REFRESH_SECRET!

@@ -1,0 +1,216 @@
+"use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.getMessageByChat = exports.sendMessage = exports.getAllChats = exports.createNewChat = void 0;
+const Chat_1 = require("../models/Chat");
+const Message_1 = require("../models/Message");
+const axios_1 = __importDefault(require("axios"));
+const createNewChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req === null || req === void 0 ? void 0 : req.user) === null || _a === void 0 ? void 0 : _a._id;
+        const { otherUserId } = req.body;
+        // 2:21:51//
+        if (!otherUserId) {
+            return res.status(400).json({ message: "Other user ID is required" });
+        }
+        const existingChat = yield Chat_1.Chat.findOne({
+            users: { $all: [userId, otherUserId], $size: 2 }
+        });
+        if (existingChat) {
+            return res.json({
+                messaeg: "Chat already exists",
+                chatId: existingChat._id
+            });
+        }
+        const newChat = yield Chat_1.Chat.create({
+            users: [userId, otherUserId]
+        });
+        return res.status(200).json({
+            message: "New Chat Created",
+            chatId: newChat._id
+        });
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Error" });
+    }
+});
+exports.createNewChat = createNewChat;
+const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required" });
+        }
+        const chats = yield Chat_1.Chat.find({ user: userId }).sort({ updated: -1 });
+        const chatWithUserData = yield Promise.all(chats.map((chat) => __awaiter(void 0, void 0, void 0, function* () {
+            const otherUserId = chat.users.find((id) => id !== userId);
+            const unseenCount = yield Message_1.Message.countDocuments({
+                chatId: chat._id,
+                sender: { $ne: userId },
+                seen: false
+            });
+            try {
+                const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
+                return {
+                    user: data,
+                    chat: Object.assign(Object.assign({}, chat.toObject()), { latestMessage: chat.latestMessage || null, unseenCount })
+                };
+            }
+            catch (error) {
+                console.log("error ", error);
+                return {
+                    uesr: {
+                        _id: otherUserId, name: "Unknown User"
+                    },
+                    chat: Object.assign(Object.assign({}, chat.toObject()), { latestMessage: chat.latestMessage || null, unseenCount })
+                };
+            }
+        })));
+        return res.json({
+            chats: chatWithUserData
+        });
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Error in getting chats" });
+    }
+});
+exports.getAllChats = getAllChats;
+const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const senderId = (_a = req === null || req === void 0 ? void 0 : req.user) === null || _a === void 0 ? void 0 : _a._id;
+        const { chatId, text } = req.body;
+        const imageFile = req.file;
+        if (!senderId) {
+            return res.status(400).json({ message: "Sender ID is required" });
+        }
+        if (!chatId) {
+            return res.status(400).json({ message: "Chat ID is required" });
+        }
+        if (!text && !imageFile) {
+            return res.status(400).json({ message: "Message or image is required" });
+        }
+        const chat = yield Chat_1.Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ message: "Chat not found" });
+        }
+        const isUserInChat = chat.users.some((userId) => userId.toString() === senderId.toString());
+        if (!isUserInChat) {
+            return res.status(403).json({ message: "You are not a part of this chat" });
+        }
+        const otherUserId = chat.users.find((userId) => userId.toString() !== senderId.toString());
+        if (!otherUserId) {
+            return res.status(403).json({ message: "No other user found in this chat" });
+        }
+        //socket here 
+        let messageData;
+        messageData = {
+            chatId: chatId,
+            sender: senderId,
+            seen: false,
+            seenAt: undefined
+        };
+        if (imageFile) {
+            messageData.image = {
+                url: imageFile.path,
+                publicId: imageFile.filename
+            };
+            messageData.messageType = "image";
+            messageData.text = text || "";
+        }
+        else {
+            messageData.text = text;
+            messageData.messageType = "text";
+            messageData.image = undefined;
+        }
+        const message = new Message_1.Message(messageData);
+        const savedMessage = yield message.save();
+        const latestMessageText = imageFile ? "📷 Image" : text;
+        yield Chat_1.Chat.findByIdAndUpdate(chatId, {
+            latestMessage: {
+                text: latestMessageText,
+                senderId: senderId,
+            },
+            updatedAt: new Date()
+        }, { new: true });
+        return res.status(201).json({
+            message: savedMessage,
+            sender: senderId
+        });
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Error in sending message" });
+    }
+});
+exports.sendMessage = sendMessage;
+const getMessageByChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
+    try {
+        const userId = (_a = req.user) === null || _a === void 0 ? void 0 : _a._id;
+        const { chatId } = req.params;
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required" });
+        }
+        const chat = yield Chat_1.Chat.findById(chatId);
+        if (!chat) {
+            return res.status(404).json({ message: "Chat not found" });
+        }
+        const isUserInChat = chat.users.some((id) => id.toString() === userId.toString());
+        if (!isUserInChat) {
+            return res.status(403).json({ message: "You are not a part of this chat" });
+        }
+        //when user clicks the chats, all the unseen messsages
+        const messagesToMarkSeen = yield Message_1.Message.find({
+            chatId,
+            sender: { $ne: userId },
+            seen: false
+        });
+        //mark them seen 
+        //read receipt feature
+        yield Message_1.Message.updateMany({
+            chatId: chatId,
+            sender: { $ne: userId },
+            seen: false
+        }, {
+            seen: true,
+            seenAt: new Date()
+        });
+        //ascending order 
+        const messages = yield Message_1.Message.find({ chatId }).sort({ createdAt: 1 });
+        const otherUserId = chat.users.find((id) => id !== userId);
+        try {
+            const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
+            if (!otherUserId) {
+                return res.status(404).json({ message: "No Other User" });
+            }
+            return res.status(200).json({
+                messages,
+                user: data
+            });
+        }
+        catch (error) {
+            return res.json({ messages, user: { _id: otherUserId, name: "Unknown User" } });
+        }
+    }
+    catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Error in getting messages" });
+    }
+});
+exports.getMessageByChat = getMessageByChat;

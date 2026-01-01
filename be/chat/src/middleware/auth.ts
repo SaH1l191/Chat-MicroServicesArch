@@ -16,7 +16,6 @@ export interface MyJwtPayload extends JwtPayload {
 }
 export const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-
         const token = req.cookies?.accessToken; 
         if (!token) {
             return res.status(401).json({

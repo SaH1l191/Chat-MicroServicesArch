@@ -3,7 +3,7 @@ import { Types } from "mongoose";
 
 export interface IChat {
     users: string[];
-    latestMEssage: {
+    latestMessage: {
         text: string,
         sender: string
     }

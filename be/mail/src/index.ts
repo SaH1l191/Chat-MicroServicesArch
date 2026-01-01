@@ -15,5 +15,5 @@ sendOtpConsumer()
 const app = express()
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-    console.log(`App listening at port ${PORT}`)
-})     
+    console.log(`Mail service listening at port ${PORT}`)
+})      
