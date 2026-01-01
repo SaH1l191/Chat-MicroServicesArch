@@ -1,0 +1,15 @@
+
+
+import express from 'express'
+import { getAllUsers, getAUser, getUser, login, updateName, verifyUser } from '../controller/user'
+import { authMiddleware } from '../middleware/auth'
+
+const router = express.Router()
+router.post("/login", login)
+router.post("/verify", verifyUser)
+router.post("/update/user",authMiddleware, updateName)
+router.get("/me",authMiddleware, getUser)
+
+router.post("/user/all",authMiddleware,getAllUsers)
+router.get("/user/:id", getAUser)
+export default router  

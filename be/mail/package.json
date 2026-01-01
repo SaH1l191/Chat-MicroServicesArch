@@ -1,0 +1,29 @@
+{
+  "name": "mail",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js",
+    "dev": "concurrently \"tsc -w\" \"nodemon dist/index.js\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "packageManager": "pnpm@10.24.0",
+  "dependencies": {
+    "amqplib": "^0.10.9",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "nodemailer": "^7.0.12",
+    "redis": "^5.10.0"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.8",
+    "@types/express": "^5.0.6",
+    "@types/nodemailer": "^7.0.4",
+    "concurrently": "^9.2.1",
+    "nodemon": "^3.1.11"
+  }
+}
