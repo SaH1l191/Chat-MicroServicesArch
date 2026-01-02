@@ -57,10 +57,11 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (!userId) {
             return res.status(400).json({ message: "User ID is required" });
         }
-        const chats = yield Chat_1.Chat.find({ user: userId }).sort({ updated: -1 });
+        const chats = yield Chat_1.Chat.find({ users: userId }).sort({ updated: -1 });
         //Promise.all ensures:
         // parallel DB + HTTP calls
         // faster response time than sequential await
+        console.log("Chats : ", chats);
         const chatWithUserData = yield Promise.all(chats.map((chat) => __awaiter(void 0, void 0, void 0, function* () {
             const otherUserId = chat.users.find((id) => id !== userId);
             const unseenCount = yield Message_1.Message.countDocuments({
@@ -70,6 +71,8 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
             try {
                 const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
+                console.log(`api to : ${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
+                console.log("Data from user service ", data);
                 return {
                     user: data,
                     chat: Object.assign(Object.assign({}, chat.toObject()), { latestMessage: chat.latestMessage || null, unseenCount })
@@ -86,6 +89,7 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 };
             }
         })));
+        console.log("chatWithUserData : ", chatWithUserData);
         return res.json({
             chats: chatWithUserData
         });

@@ -43,12 +43,12 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
         if (!userId) {
             return res.status(400).json({ message: "User ID is required" })
         }
-        const chats = await Chat.find({ user: userId }).sort({ updated: -1 })
+        const chats = await Chat.find({ users: userId }).sort({ updated: -1 })
 
         //Promise.all ensures:
         // parallel DB + HTTP calls
         // faster response time than sequential await
-
+        console.log("Chats : ",chats)
         const chatWithUserData = await Promise.all(
             chats.map(async (chat) => {
                 const otherUserId = chat.users.find((id) => id !== userId)
@@ -60,7 +60,8 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
                 })
                 try {
                     const { data } = await axios.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
-
+                    console.log(`api to : ${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
+                    console.log("Data from user service ", data)
                     return {
                         user: data,
                         chat: {
@@ -86,6 +87,7 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
                 }
             })
         )
+        console.log("chatWithUserData : ",chatWithUserData)
         return res.json({
             chats: chatWithUserData
         })
