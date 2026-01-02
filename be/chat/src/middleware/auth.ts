@@ -29,7 +29,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
             })
         }
         req.user = decode.user;
-        console.log("req.user ",req.user)
+        // console.log("req.user ",req.user)
         next()
     } catch (error) {
         console.log('Error in auth middleware', error)

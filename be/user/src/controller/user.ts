@@ -210,7 +210,8 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
 export const getAUser = async (req: AuthRequest, res: Response) => {
     try {
-        const user = await User.findById({ _id:req.params.id })
+        const {id}  = req.params;
+        const user = await User.findById(id)
         if (!user) {
             return res.status(200).json({
                 message: "Invalid User "

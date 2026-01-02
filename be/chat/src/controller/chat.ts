@@ -1,9 +1,10 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth";
 import { Chat } from "../models/Chat";
-import { IMessage, Message } from "../models/Message";
+import {  Message } from "../models/Message";
 import axios from "axios";
-
+import dotenv from 'dotenv'
+dotenv.config()
 
 export const createNewChat = async (req: AuthRequest, res: Response) => {
     try {
@@ -44,6 +45,10 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
         }
         const chats = await Chat.find({ user: userId }).sort({ updated: -1 })
 
+        //Promise.all ensures:
+        // parallel DB + HTTP calls
+        // faster response time than sequential await
+
         const chatWithUserData = await Promise.all(
             chats.map(async (chat) => {
                 const otherUserId = chat.users.find((id) => id !== userId)
@@ -66,6 +71,7 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
                     }
                 }
                 catch (error) {
+                    //fallback if user service fails 
                     console.log("error ", error);
                     return {
                         uesr: {
@@ -81,7 +87,7 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
             })
         )
         return res.json({
-            chats : chatWithUserData
+            chats: chatWithUserData
         })
     } catch (error) {
         console.log(error)
@@ -198,8 +204,10 @@ export const getMessageByChat = async (req: AuthRequest, res: Response) => {
         //ascending order 
         const messages = await Message.find({ chatId }).sort({ createdAt: 1 })
         const otherUserId = chat.users.find((id) => id !== userId)
+        console.log("Other Used Id ", otherUserId)
         try {
             const { data } = await axios.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
+            console.log("Data from user Serivce for other user ", data )
             if (!otherUserId) {
                 return res.status(404).json({ message: "No Other User" })
             }

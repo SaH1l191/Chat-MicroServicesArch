@@ -16,4 +16,4 @@ router.get("/user/:id", getAUser)
 
 
 router.get("/auth/refresh",refreshAccessToken)
-export default router  
+export default router   

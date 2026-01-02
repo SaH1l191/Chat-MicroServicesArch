@@ -191,7 +191,8 @@ const refreshAccessToken = (req, res) => __awaiter(void 0, void 0, void 0, funct
 exports.refreshAccessToken = refreshAccessToken;
 const getAUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const user = yield User_1.User.findById({ _id: req.params.id });
+        const { id } = req.params;
+        const user = yield User_1.User.findById(id);
         if (!user) {
             return res.status(200).json({
                 message: "Invalid User "

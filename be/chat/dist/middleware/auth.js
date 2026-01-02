@@ -30,7 +30,7 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
             });
         }
         req.user = decode.user;
-        console.log("req.user ", req.user);
+        // console.log("req.user ",req.user)
         next();
     }
     catch (error) {

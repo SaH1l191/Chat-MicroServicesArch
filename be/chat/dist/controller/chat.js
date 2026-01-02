@@ -16,6 +16,8 @@ exports.getMessageByChat = exports.sendMessage = exports.getAllChats = exports.c
 const Chat_1 = require("../models/Chat");
 const Message_1 = require("../models/Message");
 const axios_1 = __importDefault(require("axios"));
+const dotenv_1 = __importDefault(require("dotenv"));
+dotenv_1.default.config();
 const createNewChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
     try {
@@ -56,6 +58,9 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             return res.status(400).json({ message: "User ID is required" });
         }
         const chats = yield Chat_1.Chat.find({ user: userId }).sort({ updated: -1 });
+        //Promise.all ensures:
+        // parallel DB + HTTP calls
+        // faster response time than sequential await
         const chatWithUserData = yield Promise.all(chats.map((chat) => __awaiter(void 0, void 0, void 0, function* () {
             const otherUserId = chat.users.find((id) => id !== userId);
             const unseenCount = yield Message_1.Message.countDocuments({
@@ -71,6 +76,7 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 };
             }
             catch (error) {
+                //fallback if user service fails 
                 console.log("error ", error);
                 return {
                     uesr: {
@@ -194,8 +200,10 @@ const getMessageByChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
         //ascending order 
         const messages = yield Message_1.Message.find({ chatId }).sort({ createdAt: 1 });
         const otherUserId = chat.users.find((id) => id !== userId);
+        console.log("Other Used Id ", otherUserId);
         try {
             const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
+            console.log("Data from user Serivce for other user ", data);
             if (!otherUserId) {
                 return res.status(404).json({ message: "No Other User" });
             }

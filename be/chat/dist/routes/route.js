@@ -11,5 +11,5 @@ const router = express_1.default.Router();
 router.post('/chat/new', auth_1.authMiddleware, chat_1.createNewChat);
 router.get("/chat/all", auth_1.authMiddleware, chat_1.getAllChats);
 router.post("/message", auth_1.authMiddleware, multer_1.upload.single('image'), chat_1.sendMessage);
-router.get("/message/:id", auth_1.authMiddleware, chat_1.sendMessage);
+router.get("/message/:chatId", auth_1.authMiddleware, chat_1.getMessageByChat);
 exports.default = router;
