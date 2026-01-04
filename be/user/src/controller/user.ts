@@ -49,7 +49,7 @@ export const login = async (req: Request, res: Response) => {
             body: `Your OTP Code is ${otp}.It will expire after 5 minutes`
         }
         await publishToQueue('send-otp', message)
-        res.status(400).json({
+        res.status(200).json({
             message: "OTP sent successfully"
         })
 
@@ -220,7 +220,7 @@ export const getAUser = async (req: AuthRequest, res: Response) => {
         return res.status(200).json({
             user
         });
-    }
+    } 
     catch (error) {
         console.log("Error in getting User", error)
         return res.status(500).json({ message: "Internal Server Error" });

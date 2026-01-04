@@ -58,7 +58,7 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
             body: `Your OTP Code is ${otp}.It will expire after 5 minutes`
         };
         yield (0, rabbitmq_1.publishToQueue)('send-otp', message);
-        res.status(400).json({
+        res.status(200).json({
             message: "OTP sent successfully"
         });
     }

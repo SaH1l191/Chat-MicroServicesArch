@@ -9,6 +9,15 @@ import cookieParser from 'cookie-parser'
 dotenv.config()
 
 const app = express()
+
+// CORS configuration - allow requests from frontend
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3003', // Next.js default port
+  credentials: true, // Important for httpOnly cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}))
+
 app.use(express.json()) 
 app.use(cookieParser());
 app.use("/api/v1", userRoutes)
