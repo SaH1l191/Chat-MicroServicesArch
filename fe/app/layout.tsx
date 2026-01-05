@@ -1,10 +1,10 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
-import "./globals.css";
-import Navbar from "@/components/ui/Home/NavBar";
+import "./globals.css"; 
 import { AuthProvider } from "@/providers/AuthProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
+import { SocketProvider } from "@/providers/SocketProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,9 +33,10 @@ export default function RootLayout({
       >
         <QueryProvider>
           <AuthProvider>
-            <Navbar/>
-            {children}
-            <Toaster />
+            <SocketProvider>
+              {children}
+              <Toaster />
+            </SocketProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

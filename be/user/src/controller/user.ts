@@ -32,9 +32,7 @@ export const login = async (req: Request, res: Response) => {
 
         const otp = generateOTP({
             length: 8,
-            numbers: true,
-            alphabets: true,
-            upperCaseAlphabets: true,
+            numbers: true, 
         })
         const otpKey = `otp:${email}`
         await redisClient.set(otpKey, otp, {
@@ -51,7 +49,7 @@ export const login = async (req: Request, res: Response) => {
         await publishToQueue('send-otp', message)
         res.status(200).json({
             message: "OTP sent successfully"
-        })
+        }) 
 
     }
     catch (error) {
@@ -91,7 +89,7 @@ export const verifyUser = async (req: Request, res: Response) => {
 
             //refresh:USER_ID: REFRESH_TOKEN (15 days expiry)
             await redisClient.set(
-                `refresh:${user._id}`,
+                `refresh:${user._id.toString()}`,
                 refreshToken,
                 { EX: 15 * 24 * 60 * 60 }
             );
@@ -184,7 +182,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         ) as { userId: string };
 
         const savedToken = await redisClient.get(`refresh:${payload.userId}`);
-        if (savedToken && savedToken !== refreshToken) {
+        if (!savedToken && savedToken !== refreshToken) {
             return res.status(401).json({ message: "Invalid refresh token" });
         }
 
@@ -232,7 +230,7 @@ export const getAUser = async (req: AuthRequest, res: Response) => {
 export const getUser = async (req: AuthRequest, res: Response) => {
     try {
         const user = req.user
-        console.log("/me user ",req.user)
+        // console.log("/me user ",req.user)
         return res.status(200).json({
             user
         });

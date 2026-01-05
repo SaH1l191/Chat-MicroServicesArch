@@ -8,13 +8,22 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const db_1 = __importDefault(require("./config/db"));
 const route_1 = __importDefault(require("./routes/route"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
+const cors_1 = __importDefault(require("cors"));
+const socket_1 = require("./socket/socket");
 dotenv_1.default.config();
-const app = (0, express_1.default)();
-app.use(express_1.default.json());
-app.use((0, cookie_parser_1.default)());
-app.use('/api/v1', route_1.default);
+//mounting everything on app except need to listen on server 
+// because app used for routing , socket used for websockets 
+socket_1.app.use((0, cors_1.default)({
+    origin: process.env.FRONTEND_URL || 'http://localhost:3003', // Next.js default port
+    credentials: true, // Important for httpOnly cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+socket_1.app.use(express_1.default.json());
+socket_1.app.use((0, cookie_parser_1.default)());
+socket_1.app.use('/api/v1', route_1.default);
 (0, db_1.default)();
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+socket_1.server.listen(PORT, () => {
     console.log(`Chat service listening at port ${PORT}`);
 });

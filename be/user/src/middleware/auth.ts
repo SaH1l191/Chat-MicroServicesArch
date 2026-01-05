@@ -13,7 +13,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
     try {
 
         const token = req.cookies?.accessToken;
-        console.log("cookie parsed ! ")
+        // console.log("cookie parsed ! ")
         if (!token) {
             return res.status(401).json({
                 message: "Unauthorized in Auth Middleware"
@@ -26,7 +26,7 @@ export const authMiddleware = async (req: AuthRequest, res: Response, next: Next
             })
         }
         req.user = decode.user;
-        console.log("req.user ",req.user)
+        // console.log("req.user ",req.user)
         next()
     } catch (error) {
         console.log('Error in auth middleware', error)

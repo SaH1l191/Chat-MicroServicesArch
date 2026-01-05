@@ -8,7 +8,7 @@
 import express from 'express'
 import dotenv from 'dotenv'  
 import { sendOtpConsumer } from './consumer'
-  
+   
 
 dotenv.config() 
 sendOtpConsumer()

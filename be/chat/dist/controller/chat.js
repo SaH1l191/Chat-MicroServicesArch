@@ -61,9 +61,18 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         //Promise.all ensures:
         // parallel DB + HTTP calls
         // faster response time than sequential await
-        console.log("Chats : ", chats);
+        // console.log("Chats : ",chats)
         const chatWithUserData = yield Promise.all(chats.map((chat) => __awaiter(void 0, void 0, void 0, function* () {
             const otherUserId = chat.users.find((id) => id !== userId);
+            // Check if the other user has sent any messages in this chat
+            const hasMessagesFromOtherUser = yield Message_1.Message.exists({
+                chatId: chat._id,
+                sender: otherUserId
+            });
+            // Only include chats where the other user has sent messages
+            if (!hasMessagesFromOtherUser) {
+                return null;
+            }
             const unseenCount = yield Message_1.Message.countDocuments({
                 chatId: chat._id,
                 sender: { $ne: userId },
@@ -71,10 +80,12 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             });
             try {
                 const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
-                console.log(`api to : ${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
-                console.log("Data from user service ", data);
+                // console.log(`api to : ${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
+                // console.log("Data from user service ", data)
+                // Extract user from response - user service returns { user: {...} }
+                const userData = data.user || data;
                 return {
-                    user: data,
+                    user: userData,
                     chat: Object.assign(Object.assign({}, chat.toObject()), { latestMessage: chat.latestMessage || null, unseenCount })
                 };
             }
@@ -82,16 +93,18 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 //fallback if user service fails 
                 console.log("error ", error);
                 return {
-                    uesr: {
+                    user: {
                         _id: otherUserId, name: "Unknown User"
                     },
                     chat: Object.assign(Object.assign({}, chat.toObject()), { latestMessage: chat.latestMessage || null, unseenCount })
                 };
             }
         })));
-        console.log("chatWithUserData : ", chatWithUserData);
+        // Filter out null values (chats where other user hasn't sent messages)
+        const filteredChats = chatWithUserData.filter((chat) => chat !== null);
+        // console.log("chatWithUserData : ",filteredChats)
         return res.json({
-            chats: chatWithUserData
+            chats: filteredChats
         });
     }
     catch (error) {
@@ -151,15 +164,19 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         const message = new Message_1.Message(messageData);
         const savedMessage = yield message.save();
         const latestMessageText = imageFile ? "📷 Image" : text;
-        yield Chat_1.Chat.findByIdAndUpdate(chatId, {
+        const updatedChat = yield Chat_1.Chat.findByIdAndUpdate(chatId, {
             latestMessage: {
                 text: latestMessageText,
-                senderId: senderId,
+                sender: senderId,
             },
             updatedAt: new Date()
         }, { new: true });
+        // Fetch all updated messages for this chat (ascending order)
+        const messages = yield Message_1.Message.find({ chatId }).sort({ createdAt: 1 });
         return res.status(201).json({
             message: savedMessage,
+            messages, // Return all updated messages
+            chat: updatedChat, // Return updated chat
             sender: senderId
         });
     }
@@ -186,11 +203,6 @@ const getMessageByChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(403).json({ message: "You are not a part of this chat" });
         }
         //when user clicks the chats, all the unseen messsages
-        const messagesToMarkSeen = yield Message_1.Message.find({
-            chatId,
-            sender: { $ne: userId },
-            seen: false
-        });
         //mark them seen 
         //read receipt feature
         yield Message_1.Message.updateMany({
@@ -203,21 +215,23 @@ const getMessageByChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
         });
         //ascending order 
         const messages = yield Message_1.Message.find({ chatId }).sort({ createdAt: 1 });
-        const otherUserId = chat.users.find((id) => id !== userId);
+        const otherUserId = chat.users.find((id) => id.toString() !== userId.toString());
         console.log("Other Used Id ", otherUserId);
+        if (!otherUserId) {
+            return res.status(404).json({ message: "No Other User" });
+        }
         try {
             const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
             console.log("Data from user Serivce for other user ", data);
-            if (!otherUserId) {
-                return res.status(404).json({ message: "No Other User" });
-            }
+            // Extract user from response - user service returns { user: {...} } or direct user object
+            const userData = data.user || data;
             return res.status(200).json({
                 messages,
-                user: data
+                user: userData
             });
         }
         catch (error) {
-            return res.json({ messages, user: { _id: otherUserId, name: "Unknown User" } });
+            return res.status(200).json({ messages, user: { _id: otherUserId, name: "Unknown User" } });
         }
     }
     catch (error) {

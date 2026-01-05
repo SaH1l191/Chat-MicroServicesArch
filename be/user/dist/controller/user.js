@@ -42,8 +42,6 @@ const login = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
         const otp = (0, otp_agent_1.generateOTP)({
             length: 8,
             numbers: true,
-            alphabets: true,
-            upperCaseAlphabets: true,
         });
         const otpKey = `otp:${email}`;
         yield __1.redisClient.set(otpKey, otp, {
@@ -92,7 +90,7 @@ const verifyUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             const accessToken = (0, token_1.signAccessToken)(user);
             const refreshToken = (0, token_1.signRefreshToken)(user._id.toString());
             //refresh:USER_ID: REFRESH_TOKEN (15 days expiry)
-            yield __1.redisClient.set(`refresh:${user._id}`, refreshToken, { EX: 15 * 24 * 60 * 60 });
+            yield __1.redisClient.set(`refresh:${user._id.toString()}`, refreshToken, { EX: 15 * 24 * 60 * 60 });
             res.cookie("accessToken", accessToken, {
                 httpOnly: true,
                 sameSite: "lax", // instead of "strict"
@@ -169,7 +167,7 @@ const refreshAccessToken = (req, res) => __awaiter(void 0, void 0, void 0, funct
             return res.status(401).json({ message: "No refresh token" });
         const payload = jsonwebtoken_1.default.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
         const savedToken = yield __1.redisClient.get(`refresh:${payload.userId}`);
-        if (savedToken && savedToken !== refreshToken) {
+        if (!savedToken && savedToken !== refreshToken) {
             return res.status(401).json({ message: "Invalid refresh token" });
         }
         const user = yield User_1.User.findById(payload.userId);
@@ -211,7 +209,7 @@ exports.getAUser = getAUser;
 const getUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const user = req.user;
-        console.log("/me user ", req.user);
+        // console.log("/me user ",req.user)
         return res.status(200).json({
             user
         });

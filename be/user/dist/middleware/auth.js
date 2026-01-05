@@ -18,7 +18,7 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
     var _a;
     try {
         const token = (_a = req.cookies) === null || _a === void 0 ? void 0 : _a.accessToken;
-        console.log("cookie parsed ! ");
+        // console.log("cookie parsed ! ")
         if (!token) {
             return res.status(401).json({
                 message: "Unauthorized in Auth Middleware"
@@ -31,7 +31,7 @@ const authMiddleware = (req, res, next) => __awaiter(void 0, void 0, void 0, fun
             });
         }
         req.user = decode.user;
-        console.log("req.user ", req.user);
+        // console.log("req.user ",req.user)
         next();
     }
     catch (error) {
