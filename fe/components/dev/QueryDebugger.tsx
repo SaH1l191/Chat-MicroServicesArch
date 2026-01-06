@@ -8,7 +8,7 @@
 //  * Development component to observe and debug React Query cache
 //  * Only use this in development mode
 //  */
-// export function QueryDebugger() {
+export function QueryDebugger() {
 //   const [observeAll, setObserveAll] = useState(false)
 //   const [observeChats, setObserveChats] = useState(false)
 //   const [observeMessages, setObserveMessages] = useState(false)
@@ -69,5 +69,5 @@
 //       </div>
 //     </div>
 //   )
-// }
+}
 

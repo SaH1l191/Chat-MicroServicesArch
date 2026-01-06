@@ -8,7 +8,7 @@
 //  * Useful for debugging and monitoring React Query behavior
 //  * @param enabled - Whether the observer is enabled (default: true)
 //  */
-// export function useQueryObserver(enabled: boolean = true) {
+export function useQueryObserver(enabled: boolean = true) {
 //   const queryClient = useQueryClient()
 
 //   useEffect(() => {
@@ -117,5 +117,5 @@
 
 //     return unsubscribe
 //   }, [queryClient, JSON.stringify(queryKey), enabled])
-// }
+}
 

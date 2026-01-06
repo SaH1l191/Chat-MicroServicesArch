@@ -4,7 +4,7 @@ import { useEffect, ReactNode } from "react"
 import { useQueryClient } from "@tanstack/react-query"
 import { setQueryClient } from "@/lib/axios"
 import { setChatQueryClient } from "@/lib/chatApi"
-import { QueryDebugger } from "@/components/dev/QueryDebugger"
+// import { QueryDebugger } from "@/components/dev/QueryDebugger"
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
@@ -18,7 +18,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   return (
     <>
       {children}
-      <QueryDebugger />
+      {/* <QueryDebugger /> */}
     </>
   )
 }
