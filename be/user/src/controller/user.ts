@@ -32,7 +32,7 @@ export const login = async (req: Request, res: Response) => {
 
         const otp = generateOTP({
             length: 8,
-            numbers: true, 
+            numbers: true,
         })
         const otpKey = `otp:${email}`
         await redisClient.set(otpKey, otp, {
@@ -49,7 +49,7 @@ export const login = async (req: Request, res: Response) => {
         await publishToQueue('send-otp', message)
         res.status(200).json({
             message: "OTP sent successfully"
-        }) 
+        })
 
     }
     catch (error) {
@@ -175,7 +175,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     try {
         const refreshToken = req.cookies?.refreshToken;
         if (!refreshToken) return res.status(401).json({ message: "No refresh token" });
- 
+
         const payload = jwt.verify(
             refreshToken,
             process.env.JWT_REFRESH_SECRET!
@@ -208,7 +208,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
 export const getAUser = async (req: AuthRequest, res: Response) => {
     try {
-        const {id}  = req.params;
+        const { id } = req.params;
         const user = await User.findById(id)
         if (!user) {
             return res.status(200).json({
@@ -218,7 +218,7 @@ export const getAUser = async (req: AuthRequest, res: Response) => {
         return res.status(200).json({
             user
         });
-    } 
+    }
     catch (error) {
         console.log("Error in getting User", error)
         return res.status(500).json({ message: "Internal Server Error" });
@@ -234,7 +234,7 @@ export const getUser = async (req: AuthRequest, res: Response) => {
         return res.status(200).json({
             user
         });
- 
+
     }
     catch (error) {
         console.log("Error in getting User", error)
@@ -252,20 +252,38 @@ export const updateName = async (req: AuthRequest, res: Response) => {
         }
         user.name = req.body.name
         await user.save()
-        const token = await jwt.sign({ user }, process.env.JWT_SECRET!, { expiresIn: "15d" })
-        res.cookie("token", token, {
+
+        // Refresh tokens after profile update
+        const accessToken = signAccessToken(user);
+        const refreshToken = signRefreshToken(user._id.toString());
+
+        // Store/refresh refresh token in Redis
+        await redisClient.set(
+            `refresh:${user._id.toString()}`,
+            refreshToken,
+            { EX: 15 * 24 * 60 * 60 }
+        );
+
+        // Set new cookies
+        res.cookie("accessToken", accessToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 15 * 60 * 1000
+        });
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 24 * 60 * 60 * 1000
         });
+
         res.json({
             message: "User Updated",
             user,
-            token
+            token: accessToken
         });
-
-
     }
     catch (error) {
         console.log("Error in getting User", error)

@@ -7,19 +7,21 @@ import { useQueryClient } from "@tanstack/react-query"
 import { Loader2, Image as ImageIcon } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
- 
+
 interface ChatInterfaceProps {
   chatId: string | null
   selectedUser: { _id: string; name: string; email: string } | null
+  onlineUsers: string[]
 }
 
-export function ChatInterface({ chatId, selectedUser }: ChatInterfaceProps) {
+export function ChatInterface({ chatId, selectedUser, onlineUsers }: ChatInterfaceProps) {
   const { data: currentUser } = useUser()
+  // console.log("currentIdUser", currentUser)
   const { data: messagesData, isLoading, refetch } = useMessages(chatId)
   const queryClient = useQueryClient()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
-  
+
   const messages = messagesData?.messages || []
 
   useEffect(() => {
@@ -75,12 +77,15 @@ export function ChatInterface({ chatId, selectedUser }: ChatInterfaceProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Header of the person we are chatting with  */}
-      <div className="p-4 border-b bg-background">
+      <div className="p-4 border-b bg-background  top-0 sticky">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center relative justify-center">
             <span className="text-sm font-medium">
               {selectedUser.name.charAt(0).toUpperCase()}
             </span>
+            {/* add a online status  badge */}
+            <span className={`${onlineUsers.includes(selectedUser?._id) ? 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white' : ''}`}></span>
+
           </div>
           <div>
             <p className="font-medium">{selectedUser.name}</p>

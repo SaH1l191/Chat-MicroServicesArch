@@ -11,6 +11,12 @@ interface UserResponse {
   user: User
 }
 
+interface UpdateNameResponse {
+  message: string
+  user: User
+  token: string
+}
+
 // Query key factory
 export const userKeys = {
   all: ["user"] as const,
@@ -37,6 +43,26 @@ export function useUser() {
     refetchOnWindowFocus: false,
     refetchOnMount: true,
     refetchOnReconnect: false,
+  })
+}
+
+// Update current user's name
+export function useUpdateUserName() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (name: string) => {
+      const { data } = await api.post<UpdateNameResponse>("/api/v1/update/user", {
+        name,
+      })
+      console.log("Data from update User ",data)
+      return data
+    },
+    onSuccess: (data) => {
+      // Update cached "me" data with the updated user
+      queryClient.setQueryData(userKeys.me(), data.user)
+      queryClient.invalidateQueries({ queryKey: userKeys.all })
+    },
   })
 }
 

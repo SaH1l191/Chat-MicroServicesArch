@@ -231,17 +231,28 @@ const updateName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         }
         user.name = req.body.name;
         yield user.save();
-        const token = yield jsonwebtoken_1.default.sign({ user }, process.env.JWT_SECRET, { expiresIn: "15d" });
-        res.cookie("token", token, {
+        // Refresh tokens after profile update
+        const accessToken = (0, token_1.signAccessToken)(user);
+        const refreshToken = (0, token_1.signRefreshToken)(user._id.toString());
+        // Store/refresh refresh token in Redis
+        yield __1.redisClient.set(`refresh:${user._id.toString()}`, refreshToken, { EX: 15 * 24 * 60 * 60 });
+        // Set new cookies
+        res.cookie("accessToken", accessToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
+            maxAge: 15 * 60 * 1000
+        });
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            sameSite: "lax",
+            secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 24 * 60 * 60 * 1000
         });
         res.json({
             message: "User Updated",
             user,
-            token
+            token: accessToken
         });
     }
     catch (error) {

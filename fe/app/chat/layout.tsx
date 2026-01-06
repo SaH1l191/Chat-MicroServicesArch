@@ -36,13 +36,14 @@ export default function ChatLayout({
           onSelectChat={handleSelectChat}
           onSelectUser={handleSelectUser}
           onlineUsers={onlineUsers}
+          selectedUser ={selectedUser}
         />
       </div>
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col overflow-y-auto">
         <div className="flex-1 flex flex-col ">
-          <ChatInterface chatId={selectedChatId} selectedUser={selectedUser} />
+          <ChatInterface chatId={selectedChatId} selectedUser={selectedUser} onlineUsers={onlineUsers} />
 
         </div>
         <MessageInput chatId={selectedChatId} />
