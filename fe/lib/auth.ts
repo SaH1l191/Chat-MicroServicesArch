@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 
 export async function getUser() {
-    console.log("Hit getUser from Next Server")
+    // console.log("Hit getUser from Next Server")
     const res = await fetch(`${process.env.APP_URL}/api/v1/me`, {
         headers: {
             Cookie: cookies().toString(),

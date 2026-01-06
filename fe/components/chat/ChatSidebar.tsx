@@ -3,8 +3,8 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { useChats, useAllUsers, useCreateChat, type ChatWithUser, type ChatUser } from "@/lib/queries/chat"
-import { useUser, useUpdateUserName } from "@/lib/queries/user"
+import { useChats, useAllUsers, useCreateChat, type ChatUser } from "@/lib/queries/chat"
+import { useUser, useUpdateUserName, useLogout } from "@/lib/queries/user"
 import { Search, MessageSquare, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -14,9 +14,10 @@ interface ChatSidebarProps {
   onSelectUser: (user: ChatUser) => void,
   selectedUser: ChatUser | null
   onlineUsers: string[]
+  typingStatus: Record<string, boolean> // { [chatId]: isTyping }
 }
 
-export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selectedUser }: ChatSidebarProps) {
+export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selectedUser, typingStatus }: ChatSidebarProps) {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAllUsers, setShowAllUsers] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -26,7 +27,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
   const { data: allUsers, isLoading: usersLoading } = useAllUsers()
   const createChatMutation = useCreateChat()
   const updateNameMutation = useUpdateUserName()
-
+  const logout = useLogout()
   const handleSettings = () => {
     if (currentUser) {
       setNewName(currentUser.name || "")
@@ -78,7 +79,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
   )
 
   const filteredChats = chats
-    ?.filter((chat) => chat?.user && chat.user.name && chat.user.email) // Remove invalid chats first
+    // ?.filter((chat) => chat?.user && chat.user.name && chat.user.email) // Remove invalid chats first
     ?.filter(
       (chat) =>
         chat.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,6 +189,11 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
                               </span>
                             )}
                             <span className={`${onlineUsers.includes(user._id) ? 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white' : ''}`}></span>
+                            {typingStatus[chat._id] && (
+                              <div className="text-green-500 absolute -bottom-3 -right-6 flex items-center justify-center rounded-full px-2 py-1 text-xs">
+                                typing...
+                              </div>
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium truncate">{user.name || "Unknown User"}</p>
@@ -232,11 +238,11 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
                 </span>
               </div>
               <div className="flex flex-col items-end">
-                <span className="text-sm font-medium truncate max-w-[160px]">
+                <span className="text-sm font-medium truncate max-w-40">
                   {currentUser.name || currentUser.email}
                 </span>
                 {currentUser.name && (
-                  <span className="text-xs text-muted-foreground truncate max-w-[160px]">
+                  <span className="text-xs text-muted-foreground truncate max-w-40">
                     {currentUser.email}
                   </span>
                 )}
@@ -246,33 +252,43 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
             {settingsOpen && (
               <div className="absolute bottom-20 right-4 w-64 rounded-md border bg-popover p-3 shadow-lg z-10">
                 <form className="space-y-2" onSubmit={handleSubmitName}>
-                  <p className="text-xs font-medium text-muted-foreground">
-                    Change display name
-                  </p>
-                  <Input
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    placeholder="Enter new name"
-                    autoFocus
-                  />
-                  <div className="flex justify-end gap-2 pt-1">
-                    <Button
-                      type="button"
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground">
+                      Change display name
+                    </p>
+                    <Input
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      placeholder="Enter new name"
+                      autoFocus
+                    />
+                    <div className="flex justify-end gap-2 pt-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSettingsOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        size="sm"
+                        disabled={updateNameMutation.isPending || !newName.trim()}
+                      >
+                        {updateNameMutation.isPending ? "Saving..." : "Save"}
+                      </Button>
+                    </div>
+                  </div>
+                  <hr className="" />
+                  <div>
+                    <Button type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => setSettingsOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      size="sm"
-                      disabled={updateNameMutation.isPending || !newName.trim()}
-                    >
-                      {updateNameMutation.isPending ? "Saving..." : "Save"}
-                    </Button>
+                      onClick={() => logout.mutate()}  >Log out</Button>
                   </div>
                 </form>
+
               </div>
             )}
           </div>

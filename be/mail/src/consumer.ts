@@ -5,15 +5,16 @@ dotenv.config()
 
 export const sendOtpConsumer = async () => {
     try {
-        const connection = await ampq.connect({
-            protocol: "amqp",
-            hostname: process.env.Rabbitmq_Host!,
-            port: 5672,
-            username: process.env.Rabbitmq_Username!,
-            password: process.env.Rabbitmq_Password!
-        })
+        // const connection = await ampq.connect({
+        //     protocol: "amqp",
+        //     hostname: process.env.Rabbitmq_Host!,
+        //     port: 5672,
+        //     username: process.env.Rabbitmq_Username!,
+        //     password: process.env.Rabbitmq_Password!
+        // })
+        const connection = await ampq.connect(process.env.Rabbitmq_URL!);
         const channel = await connection.createChannel()
-        await channel.assertQueue("otp", { durable: true })
+        await channel.assertQueue("send-otp", { durable: true })
         console.log("Mail service consumer started!")
 
 

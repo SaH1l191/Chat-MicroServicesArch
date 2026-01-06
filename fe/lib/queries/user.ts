@@ -16,14 +16,13 @@ interface UpdateNameResponse {
   user: User
   token: string
 }
-
-// Query key factory
+ 
 export const userKeys = {
   all: ["user"] as const,
   me: () => [...userKeys.all, "me"] as const,
 }
 
-// Fetch current user
+
 export const fetchUser = async (): Promise<User | null> => {
   try {
     const { data } = await api.get<UserResponse>("/api/v1/me")
@@ -33,12 +32,12 @@ export const fetchUser = async (): Promise<User | null> => {
   }
 }
 
-// Hook to get current user
+
 export function useUser() {
   return useQuery({
     queryKey: userKeys.me(),
     queryFn: fetchUser,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: false,
     refetchOnWindowFocus: false,
     refetchOnMount: true,
@@ -46,7 +45,7 @@ export function useUser() {
   })
 }
 
-// Update current user's name
+
 export function useUpdateUserName() {
   const queryClient = useQueryClient()
 
@@ -55,18 +54,19 @@ export function useUpdateUserName() {
       const { data } = await api.post<UpdateNameResponse>("/api/v1/update/user", {
         name,
       })
-      console.log("Data from update User ",data)
+      console.log("Data from update User ", data)
       return data
     },
     onSuccess: (data) => {
-      // Update cached "me" data with the updated user
+
+
       queryClient.setQueryData(userKeys.me(), data.user)
       queryClient.invalidateQueries({ queryKey: userKeys.all })
     },
   })
 }
 
-// Logout mutation
+
 export function useLogout() {
   const queryClient = useQueryClient()
 
@@ -76,12 +76,10 @@ export function useLogout() {
       return data
     },
     onSuccess: () => {
-      // Clear user query cache
       queryClient.setQueryData(userKeys.me(), null)
       queryClient.invalidateQueries({ queryKey: userKeys.all })
     },
     onError: () => {
-      // Even if logout fails, clear user state
       queryClient.setQueryData(userKeys.me(), null)
     },
   })

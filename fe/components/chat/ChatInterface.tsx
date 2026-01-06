@@ -12,9 +12,10 @@ interface ChatInterfaceProps {
   chatId: string | null
   selectedUser: { _id: string; name: string; email: string } | null
   onlineUsers: string[]
+  isUserTyping: boolean
 }
 
-export function ChatInterface({ chatId, selectedUser, onlineUsers }: ChatInterfaceProps) {
+export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping }: ChatInterfaceProps) {
   const { data: currentUser } = useUser()
   // console.log("currentIdUser", currentUser)
   const { data: messagesData, isLoading, refetch } = useMessages(chatId)
@@ -61,7 +62,7 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers }: ChatInterfa
   }, [handleScroll])
 
 
-
+  // edge case
   if (!chatId || !selectedUser) {
     return (
       <div className="flex items-center justify-center h-full bg-muted/30">
@@ -86,6 +87,13 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers }: ChatInterfa
             {/* add a online status  badge */}
             <span className={`${onlineUsers.includes(selectedUser?._id) ? 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white' : ''}`}></span>
 
+            {/* typing */}
+
+            {isUserTyping && (
+              <div className="text-green-500 absolute -bottom-3 -right-6 flex items-center justify-center rounded-full  px-2 py-1 text-xs  ">
+                typing...
+              </div>
+            )}
           </div>
           <div>
             <p className="font-medium">{selectedUser.name}</p>

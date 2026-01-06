@@ -14,7 +14,7 @@ dotenv_1.default.config();
 //mounting everything on app except need to listen on server 
 // because app used for routing , socket used for websockets 
 socket_1.app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3003', // Next.js default port
+    origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003',
     credentials: true, // Important for httpOnly cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -26,4 +26,7 @@ socket_1.app.use('/api/v1', route_1.default);
 const PORT = process.env.PORT || 3000;
 socket_1.server.listen(PORT, () => {
     console.log(`Chat service listening at port ${PORT}`);
+});
+socket_1.app.get('/', (req, res) => {
+    res.send('Chat Service is running');
 });

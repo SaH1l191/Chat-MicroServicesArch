@@ -16,7 +16,7 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 // CORS configuration - allow requests from frontend
 app.use((0, cors_1.default)({
-    origin: process.env.FRONTEND_URL || 'http://localhost:3003', // Next.js default port
+    origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003', // Next.js default port
     credentials: true, // Important for httpOnly cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -35,4 +35,7 @@ exports.redisClient.connect()
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`User service listening at port ${PORT}`);
+});
+app.get('/', (req, res) => {
+    res.send('User Service is running');
 });

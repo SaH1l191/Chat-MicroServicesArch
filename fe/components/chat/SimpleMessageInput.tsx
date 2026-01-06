@@ -1,4 +1,5 @@
 "use client"
+
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,11 +12,9 @@ import { useUser } from "@/lib/queries/user"
 interface MessageInputProps {
   chatId: string | null
   disabled?: boolean
-  isUserTyping: boolean
-  setIsUserTyping: (typing: boolean) => void
 }
 
-export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }: MessageInputProps) {
+export function MessageInput({ chatId, disabled }: MessageInputProps) {
   const [text, setText] = useState("")
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
@@ -23,6 +22,7 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
   const sendMessageMutation = useSendMessage()
   const { socket } = useSocket()
   const { data: currentUser } = useUser()
+
   const typingTimerRef = useRef<NodeJS.Timeout | null>(null)
   const isTypingRef = useRef<boolean>(false)
 
@@ -30,14 +30,14 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
     if (!socket || !chatId || !currentUser?._id) return
     if (isTypingRef.current) return
     isTypingRef.current = true
-    socket.emit('typing:start', { chatId, userId: currentUser._id })
+    socket.emit("typing:start", { chatId, userId: currentUser._id })
   }
 
   const stopTyping = () => {
     if (!socket || !chatId || !currentUser?._id) return
     if (!isTypingRef.current) return
     isTypingRef.current = false
-    socket.emit('typing:stop', { chatId, userId: currentUser._id })
+    socket.emit("typing:stop", { chatId, userId: currentUser._id })
   }
 
   const scheduleStopTyping = () => {
@@ -45,9 +45,8 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
     typingTimerRef.current = setTimeout(() => {
       stopTyping()
       typingTimerRef.current = null
-    }, 1200)
+    }, 4000)
   }
-
 
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -93,6 +92,7 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
       return
     }
     try {
+      // Stop typing when sending message
       stopTyping()
       if (typingTimerRef.current) {
         clearTimeout(typingTimerRef.current)
@@ -113,17 +113,11 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
   const handleSetText = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newText = e.target.value
     setText(newText)
-    const hasText = newText.trim().length > 0
+    const hasText = newText.trim().length > 1 // Only emit when length > 1 as user mentioned
 
     if (hasText) {
       startTyping()
-      if (typingTimerRef.current) {
-        clearTimeout(typingTimerRef.current)
-      }
-      typingTimerRef.current = setTimeout(() => {
-        stopTyping()
-        typingTimerRef.current = null
-      }, 1200)
+      scheduleStopTyping()
     } else {
       // User cleared the input, stop typing immediately
       stopTyping()
@@ -134,14 +128,18 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
     }
   }
 
-  // Cleanup component unmounts
+  // Cleanup typing status when chat changes or component unmounts
   useEffect(() => {
+    // Clear any existing timeout on chat switch
     if (typingTimerRef.current) {
       clearTimeout(typingTimerRef.current)
       typingTimerRef.current = null
     }
+    // Ensure not marked as typing when chat changes
     stopTyping()
+
     return () => {
+      // Cleanup on unmount
       if (typingTimerRef.current) {
         clearTimeout(typingTimerRef.current)
         typingTimerRef.current = null
@@ -156,8 +154,6 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
 
   return (
     <div className="p-4 border-t bg-background sticky bottom-0">
-
-
       {imagePreview && (
         <div className="mb-3 relative inline-block">
           <div className="relative">
@@ -177,7 +173,6 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
           </div>
         </div>
       )}
-
 
       <div className="flex items-center gap-2">
         <input
@@ -218,4 +213,3 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
     </div>
   )
 }
-

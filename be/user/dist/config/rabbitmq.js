@@ -18,20 +18,30 @@ let channel;
 // virtual connection.
 //one tcp connection 
 // rabbitmq work happens throgu channel 
+// export const connectRabbitMq = async () => {
+//     try {
+//         const connection = await ampq.connect({
+//             protocol: "amqp",
+//             hostname: process.env.Rabbitmq_Host,
+//             port: 5672,
+//             username: process.env.Rabbitmq_Username,
+//             password: process.env.Rabbitmq_Password
+//         })
+//         channel = await connection.createChannel()
+//         console.log("Connected to RabbitMQ")
+//     } catch (error) {
+//         console.log("error in conncecting to rabbitmq", error)
+//     }
+// }
 const connectRabbitMq = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const connection = yield amqplib_1.default.connect({
-            protocol: "amqp",
-            hostname: process.env.Rabbitmq_Host,
-            port: 5672,
-            username: process.env.Rabbitmq_Username,
-            password: process.env.Rabbitmq_Password
-        });
+        // Example: amqps://username:password@hostname/vhost
+        const connection = yield amqplib_1.default.connect(process.env.Rabbitmq_URL);
         channel = yield connection.createChannel();
         console.log("Connected to RabbitMQ");
     }
     catch (error) {
-        console.log("error in conncecting to rabbitmq", error);
+        console.log("Error in connecting to RabbitMQ:", error);
     }
 });
 exports.connectRabbitMq = connectRabbitMq;

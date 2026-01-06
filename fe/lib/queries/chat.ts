@@ -41,7 +41,7 @@ export interface Message {
   createdAt: string
 }
 
-// Simple flat query keys - no hierarchy needed since we use direct cache updates
+
 export const chatKeys = {
   chats: ["chats"] as const,
   messages: (chatId: string) => ["message", chatId] as const,
@@ -51,15 +51,15 @@ export const userKeys = {
   list: ["users"] as const,
 }
 
-// Fetch all chats
+
 export const fetchAllChats = async (): Promise<ChatWithUser[]> => {
   const { data } = await chatApi.get<{ chats: any[] }>("/api/v1/chat/all")
-  // Handle nested user structure: user.user -> user
-  // The API may return { user: { user: {...} } } or { user: {...} }
+  
+  
   return data.chats
-    .filter((chat) => chat !== null) // Remove null chats
+    .filter((chat) => chat !== null) 
     .map((chat) => {
-      // Extract user from nested structure if needed
+      
       let userData = chat.user
       if (userData && userData.user) {
         userData = userData.user
@@ -69,10 +69,10 @@ export const fetchAllChats = async (): Promise<ChatWithUser[]> => {
         user: userData,
       }
     })
-    .filter((chat) => chat.user && chat.user._id) // Remove chats with invalid user data
+    .filter((chat) => chat.user && chat.user._id) 
 }
 
-// Fetch messages for a chat
+
 export const fetchMessages = async (chatId: string): Promise<{
   messages: Message[]
   user: ChatUser
@@ -83,13 +83,13 @@ export const fetchMessages = async (chatId: string): Promise<{
   return data
 }
 
-// Fetch all users (uses user service, not chat service)
+
 export const fetchAllUsers = async (): Promise<ChatUser[]> => {
   const { data } = await api.post<{ users: ChatUser[] }>("/api/v1/user/all")
   return data.users
 }
 
-// Create new chat
+
 export const createChat = async (otherUserId: string): Promise<{ chatId: string }> => {
   const { data } = await chatApi.post<{ chatId: string; message?: string }>("/api/v1/chat/new", {
     otherUserId,
@@ -98,12 +98,13 @@ export const createChat = async (otherUserId: string): Promise<{ chatId: string 
 }
 
 
-// Hooks
+
 export function useChats() {
   return useQuery({
     queryKey: chatKeys.chats,
     queryFn: fetchAllChats,
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: 30 * 1000, 
+    
   })
 }
 
@@ -114,7 +115,7 @@ export function useMessages(chatId: string | null) {
     queryKey: chatKeys.messages(chatId || ""),
     queryFn: () => fetchMessages(chatId!),
     enabled: !!chatId,
-    staleTime: 10 * 1000, // 10 seconds
+    staleTime: 10 * 1000, 
   })
 
   // When messages are successfully fetched, they get marked as seen on the backend
@@ -132,7 +133,7 @@ export function useAllUsers() {
   return useQuery({
     queryKey: userKeys.list,
     queryFn: fetchAllUsers,
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000, 
   })
 }
 
@@ -147,9 +148,6 @@ export function useCreateChat() {
   })
 }
 
-
-
-// Send message
 export const sendMessageAPI = async (
   chatId: string,
   text: string,
@@ -184,7 +182,7 @@ export function useSendMessage() {
     mutationFn: ({ chatId, text, image }: { chatId: string; text: string; image?: File }) =>
       sendMessageAPI(chatId, text, image),
     onSuccess: (response, { chatId }) => {
-      // Get existing user data from cache
+      //  existing user data from cache
       const existingData = queryClient.getQueryData<{
         messages: Message[]
         user: ChatUser

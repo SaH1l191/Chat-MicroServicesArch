@@ -19,15 +19,16 @@ const mailConfig_1 = __importDefault(require("./config/mailConfig"));
 dotenv_1.default.config();
 const sendOtpConsumer = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const connection = yield amqplib_1.default.connect({
-            protocol: "amqp",
-            hostname: process.env.Rabbitmq_Host,
-            port: 5672,
-            username: process.env.Rabbitmq_Username,
-            password: process.env.Rabbitmq_Password
-        });
+        // const connection = await ampq.connect({
+        //     protocol: "amqp",
+        //     hostname: process.env.Rabbitmq_Host!,
+        //     port: 5672,
+        //     username: process.env.Rabbitmq_Username!,
+        //     password: process.env.Rabbitmq_Password!
+        // })
+        const connection = yield amqplib_1.default.connect(process.env.Rabbitmq_URL);
         const channel = yield connection.createChannel();
-        yield channel.assertQueue("otp", { durable: true });
+        yield channel.assertQueue("send-otp", { durable: true });
         console.log("Mail service consumer started!");
         //listening mode : no polling 
         channel.consume("send-otp", (message) => __awaiter(void 0, void 0, void 0, function* () {

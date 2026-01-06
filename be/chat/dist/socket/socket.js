@@ -13,7 +13,7 @@ const server = http_1.default.createServer(app);
 exports.server = server;
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:3003',
+        origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003', // Next.js default port
         credentials: true,
         methods: ['GET', 'POST']
     }
@@ -43,5 +43,23 @@ io.on('connection', (socket) => {
     });
     socket.on('connect-error', (error) => {
         console.log('Connect error', error);
+    });
+    socket.on('join:chat', (chatId) => {
+        socket.join(`chat:${chatId}`);
+        console.log(`User ${userId} joined chat room: chat:${chatId}`);
+    });
+    socket.on('leave:chat', (chatId) => {
+        socket.leave(`chat:${chatId}`);
+        console.log(`User ${userId} left chat room: chat:${chatId}`);
+    });
+    socket.on('typing:start', (data) => {
+        const { chatId, userId } = data;
+        // Emit to all users in this chat room except the sender
+        socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: true });
+    });
+    socket.on('typing:stop', (data) => {
+        const { chatId, userId } = data;
+        // Notify room that user stopped typing (do not leave the room)
+        socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: false });
     });
 });
