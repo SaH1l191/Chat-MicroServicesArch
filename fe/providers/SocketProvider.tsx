@@ -32,8 +32,8 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         if (!user?._id) {
             return
         }
-        const socketUrl =
-            process.env.NEXT_PUBLIC_CHAT_API_URL ||
+        const socketUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? 
+            process.env.NEXT_PUBLIC_CHAT_API_URL :
             "http://localhost:3002"
 
         // Create socket connection

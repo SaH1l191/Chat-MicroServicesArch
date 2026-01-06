@@ -61,6 +61,7 @@ chatApi.interceptors.response.use(
       try {
 
         const refreshResponse = await axios.get(
+          
           `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/api/v1/auth/refresh`,
           {
             withCredentials: true,

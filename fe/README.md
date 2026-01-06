@@ -33,4 +33,29 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
+### Environment Variables
+
+When deploying to Vercel, you need to set the following environment variables in your Vercel project settings:
+
+1. **NEXT_PUBLIC_CODEBASE** - Set to `"production"` for production deployments
+2. **NEXT_PUBLIC_APP_URL** - Your user API URL (e.g., `https://your-user-api.vercel.app`)
+3. **NEXT_PUBLIC_CHAT_API_URL** - Your chat API URL (e.g., `https://your-chat-api.vercel.app`)
+
+### Vercel Configuration
+
+The project includes a `vercel.json` file in the root directory that configures Vercel to:
+- Use `fe/` as the root directory
+- Install dependencies using `pnpm`
+- Build the Next.js application
+
+### Local Development Environment Variables
+
+For local development, create a `.env.local` file in the `fe/` directory:
+
+```
+NEXT_PUBLIC_CODEBASE=development
+NEXT_PUBLIC_APP_URL=http://localhost:3001
+NEXT_PUBLIC_CHAT_API_URL=http://localhost:3002
+```
+
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

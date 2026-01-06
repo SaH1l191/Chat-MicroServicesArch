@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-    baseURL: process.env.NEXT_PUBLIC_APP_URL,
+    baseURL: process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_PUBLIC_APP_URL : "http://localhost:3001",
     withCredentials: true,
     headers: {
         "Content-Type": "application/json",
@@ -14,7 +14,7 @@ let isRefreshing = false
 api.interceptors.response.use(
     (response) => response,
     async (error) => {
-        const originalRequest = error.config 
+        const originalRequest = error.config
         const isRefreshEndpoint = originalRequest.url?.includes("/auth/refresh")
         if (
             error.response?.status === 401 &&
@@ -27,14 +27,15 @@ api.interceptors.response.use(
 
             try {
                 await axios.get(
-                    `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/auth/refresh`,
+                    process.env.NEXT_PUBLIC_CODEBASE === "production" ?
+                        `${process.env.NEXT_PUBLIC_APP_URL}/api/v1/auth/refresh` : "http://localhost:3000/api/v1/auth/refresh",
                     {
                         withCredentials: true,
                         headers: {
                             "Content-Type": "application/json",
                         },
                     }
-                ) 
+                )
                 isRefreshing = false
                 return api(originalRequest)
             } catch (refreshError) {
