@@ -1,9 +1,11 @@
 import { Response } from "express";
 import { AuthRequest } from "../middleware/auth";
 import { Chat } from "../models/Chat";
-import {  Message } from "../models/Message";
+import { Message } from "../models/Message";
 import axios from "axios";
 import dotenv from 'dotenv'
+import { io, userSocketMap, viewingChatMap } from "../socket/socket";
+import { IMessage } from "../models/Message";
 dotenv.config()
 
 export const createNewChat = async (req: AuthRequest, res: Response) => {
@@ -102,10 +104,10 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
                 }
             })
         )
-        
+
         // Filter out null values (chats where other user hasn't sent messages)
         const filteredChats = chatWithUserData.filter((chat) => chat !== null)
-        
+
         // console.log("chatWithUserData : ",filteredChats)
         return res.json({
             chats: filteredChats
@@ -165,7 +167,7 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
             messageData.image = undefined
         }
         const message = new Message(messageData)
-        const savedMessage = await message.save()
+        const savedMessage: IMessage = await message.save()
         const latestMessageText = imageFile ? "📷 Image" : text
         const updatedChat = await Chat.findByIdAndUpdate(chatId, {
             latestMessage: {
@@ -178,10 +180,40 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
         // Fetch all updated messages for this chat (ascending order)
         const messages = await Message.find({ chatId }).sort({ createdAt: 1 })
 
+        // Emit socket event for new message
+        io.to(`chat:${chatId}`).emit('message:new', {
+            message: savedMessage,
+            chatId,
+            senderId
+        })
+
+        // receiver is online +  viewing
+        const receiverSocketId = userSocketMap[otherUserId.toString()]
+        const receiverViewingChat = viewingChatMap[otherUserId.toString()]
+        
+        // Check if receiver is online +  viewing => mark seen immediately
+        if (receiverSocketId && receiverViewingChat === chatId) {
+            const receiverSocket = io.sockets.sockets.get(receiverSocketId)
+            if (receiverSocket) {
+                const isInRoom = Array.from(receiverSocket.rooms).includes(`chat:${chatId}`)
+                if (isInRoom) {
+                    await Message.findByIdAndUpdate(savedMessage._id, {
+                        seen: true,
+                        seenAt: new Date()
+                    })
+                    savedMessage.seen = true
+                    savedMessage.seenAt = new Date()
+                    io.to(`chat:${chatId}`).emit('message:read', {
+                        chatId,
+                        messageIds: [savedMessage._id.toString()]
+                    })
+                }
+            }
+        }
         return res.status(201).json({
             message: savedMessage,
-            messages, // Return all updated messages
-            chat: updatedChat, // Return updated chat
+            messages,
+            chat: updatedChat,
             sender: senderId
         })
     }
@@ -225,15 +257,14 @@ export const getMessageByChat = async (req: AuthRequest, res: Response) => {
         const messages = await Message.find({ chatId }).sort({ createdAt: 1 })
         const otherUserId = chat.users.find((id) => id.toString() !== userId.toString())
         console.log("Other Used Id ", otherUserId)
-        
+
         if (!otherUserId) {
             return res.status(404).json({ message: "No Other User" })
         }
-        
+
         try {
             const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000"
             const { data } = await axios.get(`${baseUrl}/api/v1/user/${otherUserId}`)
-            console.log("Data from user Serivce for other user ", data )
             // Extract user from response - user service returns { user: {...} } or direct user object
             const userData = data.user || data
             return res.status(200).json({

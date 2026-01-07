@@ -4,9 +4,8 @@ import { useState, useEffect } from "react"
 import { ChatSidebar } from "@/components/chat/ChatSidebar"
 import { ChatInterface } from "@/components/chat/ChatInterface"
 import { MessageInput } from "@/components/chat/SimpleMessageInput"
-import type { ChatUser } from "@/lib/queries/chat"
-import { useSocket } from "@/providers/SocketProvider"
-import { useChats } from "@/lib/queries/chat"
+import type { ChatUser } from "@/providers/ChatProvider"
+import { useChat } from "@/providers/ChatProvider"
 import { useUser } from "@/lib/queries/user"
 
 export default function ChatLayout({
@@ -17,11 +16,7 @@ export default function ChatLayout({
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null)
   const [selectedUser, setSelectedUser] = useState<ChatUser | null>(null)
   //chatUser type is id , email , name 
-  // Track typing status per chat: { [chatId]: boolean }
-  const [typingStatus, setTypingStatus] = useState<Record<string, boolean>>({})
-
-  const { socket } = useSocket()
-  const { data: chats } = useChats()
+  const { socket, chats, typingStatus } = useChat()
 
   useEffect(() => {
     if (!socket || !chats || chats.length === 0) return
@@ -45,6 +40,8 @@ export default function ChatLayout({
     setSelectedUser(user) 
     if (socket && chatId) {
       socket.emit('join:chat', chatId)
+      // Notify backend that user is viewing this chat
+      socket.emit('viewing:chat', chatId)
     }
   }
 
@@ -52,57 +49,9 @@ export default function ChatLayout({
     setSelectedUser(user)
   }
 
-  const { onlineUsers } = useSocket()
+  const { onlineUsers } = useChat()
   const { data: currentUser } = useUser()
 
-  // Listening  for typing events from other users in all chat rooms
-  useEffect(() => {
-    if (!socket || !chats || !currentUser?._id) return
-    const typingTimeouts: Record<string, NodeJS.Timeout> = {}
-
-    const handleTypingStatus = (data: { chatId: string; userId: string; isTyping: boolean }) => { 
-      const chat = chats.find(c => c.chat._id === data.chatId)
-      if (!chat) return
-
-      // Only track typing if it's from the other user (not the current user)
-      const otherUserId = chat.user._id
-      if (data.userId === currentUser._id) return // Ignoring typing
-      if (data.userId !== otherUserId) return //track the other 
-
-      // Clear any existing timeout for this chat
-      if (typingTimeouts[data.chatId]) {
-        clearTimeout(typingTimeouts[data.chatId])
-        delete typingTimeouts[data.chatId]
-      }
-
-      // Update typing status for this chat
-      setTypingStatus(prev => ({
-        ...prev,
-        [data.chatId]: data.isTyping
-      }))
-
-      // If user started typing, set a safety timeout to clear it after 4 seconds
-      // (in case stop event is not received due to connection issues)
-      if (data.isTyping) {
-        typingTimeouts[data.chatId] = setTimeout(() => {
-          setTypingStatus(prev => ({
-            ...prev,
-            [data.chatId]: false
-          }))
-          delete typingTimeouts[data.chatId]
-        }, 4000)
-      }
-    }
-
-    socket.on('typing:status', handleTypingStatus) // this gets teh chatid,userId,isTyping from socker server automatically
-
-    return () => {
-      socket.off('typing:status', handleTypingStatus)
-      Object.values(typingTimeouts).forEach(timeout => clearTimeout(timeout))
-    }
-  }, [socket, chats, currentUser?._id])
-
-  //
   const isUserTyping = selectedChatId ? typingStatus[selectedChatId] || false : false
 
   return (

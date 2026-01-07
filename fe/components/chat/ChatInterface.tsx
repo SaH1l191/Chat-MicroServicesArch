@@ -1,10 +1,9 @@
 "use client"
 
 import { useEffect, useRef, useCallback } from "react"
-import { useMessages, type Message, chatKeys } from "@/lib/queries/chat"
+import { useChat, type Message } from "@/providers/ChatProvider"
 import { useUser } from "@/lib/queries/user"
-import { useQueryClient } from "@tanstack/react-query"
-import { Loader2, Image as ImageIcon } from "lucide-react"
+import { Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { format } from "date-fns"
 
@@ -17,19 +16,36 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping }: ChatInterfaceProps) {
   const { data: currentUser } = useUser()
-  // console.log("currentIdUser", currentUser)
-  const { data: messagesData, isLoading, refetch } = useMessages(chatId)
-  const queryClient = useQueryClient()
+  const { messages, messagesLoading, fetchMessages, socket } = useChat()
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
-  const messages = messagesData?.messages || []
+  const messagesData = chatId ? messages[chatId] : null
+  const messageList = messagesData?.messages || []
+  const isLoading = chatId ? (messagesLoading[chatId] || false) : false
 
+  // Fetch messages when chatId changes
+  useEffect(() => {
+    if (chatId) {
+      fetchMessages(chatId)
+    }
+
+    // Cleanup: notify backend when user stops viewing this chat
+    return () => {
+      if (chatId && socket) {
+        socket.emit('not:viewing:chat')
+      }
+    }
+  }, [chatId, fetchMessages, socket])
+
+
+
+
+
+  //everything related to scrolling 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" })
-  }, [messages])
-
-
+  }, [messageList])
   const lastRefetchRef = useRef<number>(0)
   const handleScroll = useCallback(async () => {
     if (!messagesContainerRef.current || !chatId) return
@@ -42,14 +58,13 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
     if (isAtBottom && now - lastRefetchRef.current > 2000) {
       lastRefetchRef.current = now
       try {
-        // scroll bottom => new messages seen -> invalidate this chatId 
-        await refetch()
-        queryClient.invalidateQueries({ queryKey: chatKeys.chats })
+        // scroll bottom => new messages seen -> refetch messages
+        await fetchMessages(chatId)
       } catch (error) {
         console.error("Error refetching messages:", error)
       }
     }
-  }, [chatId, refetch, queryClient])
+  }, [chatId, fetchMessages])
 
   useEffect(() => {
     const container = messagesContainerRef.current
@@ -88,7 +103,6 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
             <span className={`${onlineUsers.includes(selectedUser?._id) ? 'absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white' : ''}`}></span>
 
             {/* typing */}
-
             {isUserTyping && (
               <div className="text-green-500 absolute -bottom-3 -right-6 flex items-center justify-center rounded-full  px-2 py-1 text-xs  ">
                 typing...
@@ -108,8 +122,8 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
-        ) : messages.length > 0 ? (
-          messages.map((message: Message) => {
+        ) : messageList.length > 0 ? (
+          messageList.map((message: Message) => {
             const isOwnMessage = message.sender === currentUser?._id
             return (
               <div
@@ -159,7 +173,11 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
                       {format(new Date(message.createdAt), "HH:mm")}
                     </span>
                     {isOwnMessage && (
-                      <span className="">{message.seen ? "✓✓" : "✓"}</span>
+                      <span className={cn(
+                        message.seen ? "text-blue-500" : ""
+                      )}>
+                        {message.seen ? "✓✓" : "✓"}
+                      </span>
                     )}
                   </div>
                 </div>

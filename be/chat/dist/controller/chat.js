@@ -17,6 +17,7 @@ const Chat_1 = require("../models/Chat");
 const Message_1 = require("../models/Message");
 const axios_1 = __importDefault(require("axios"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const socket_1 = require("../socket/socket");
 dotenv_1.default.config();
 const createNewChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -174,10 +175,38 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         }, { new: true });
         // Fetch all updated messages for this chat (ascending order)
         const messages = yield Message_1.Message.find({ chatId }).sort({ createdAt: 1 });
+        // Emit socket event for new message
+        socket_1.io.to(`chat:${chatId}`).emit('message:new', {
+            message: savedMessage,
+            chatId,
+            senderId
+        });
+        // receiver is online +  viewing
+        const receiverSocketId = socket_1.userSocketMap[otherUserId.toString()];
+        const receiverViewingChat = socket_1.viewingChatMap[otherUserId.toString()];
+        // Check if receiver is online +  viewing => mark seen immediately
+        if (receiverSocketId && receiverViewingChat === chatId) {
+            const receiverSocket = socket_1.io.sockets.sockets.get(receiverSocketId);
+            if (receiverSocket) {
+                const isInRoom = Array.from(receiverSocket.rooms).includes(`chat:${chatId}`);
+                if (isInRoom) {
+                    yield Message_1.Message.findByIdAndUpdate(savedMessage._id, {
+                        seen: true,
+                        seenAt: new Date()
+                    });
+                    savedMessage.seen = true;
+                    savedMessage.seenAt = new Date();
+                    socket_1.io.to(`chat:${chatId}`).emit('message:read', {
+                        chatId,
+                        messageIds: [savedMessage._id.toString()]
+                    });
+                }
+            }
+        }
         return res.status(201).json({
             message: savedMessage,
-            messages, // Return all updated messages
-            chat: updatedChat, // Return updated chat
+            messages,
+            chat: updatedChat,
             sender: senderId
         });
     }
@@ -224,7 +253,6 @@ const getMessageByChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
         try {
             const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000";
             const { data } = yield axios_1.default.get(`${baseUrl}/api/v1/user/${otherUserId}`);
-            console.log("Data from user Serivce for other user ", data);
             // Extract user from response - user service returns { user: {...} } or direct user object
             const userData = data.user || data;
             return res.status(200).json({

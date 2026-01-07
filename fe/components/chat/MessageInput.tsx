@@ -2,10 +2,9 @@
 import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { useSendMessage } from "@/lib/queries/chat"
+import { useChat } from "@/providers/ChatProvider"
 import { Send, Image as ImageIcon, X } from "lucide-react"
 import { toast } from "sonner"
-import { useSocket } from "@/providers/SocketProvider"
 import { useUser } from "@/lib/queries/user"
 
 interface MessageInputProps {
@@ -20,11 +19,11 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
   const [selectedImage, setSelectedImage] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const sendMessageMutation = useSendMessage()
-  const { socket } = useSocket()
+  const { sendMessage, socket } = useChat()
   const { data: currentUser } = useUser()
   const typingTimerRef = useRef<NodeJS.Timeout | null>(null)
   const isTypingRef = useRef<boolean>(false)
+  const [isSending, setIsSending] = useState(false)
 
   const startTyping = () => {
     if (!socket || !chatId || !currentUser?._id) return
@@ -93,20 +92,19 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
       return
     }
     try {
+      setIsSending(true)
       stopTyping()
       if (typingTimerRef.current) {
         clearTimeout(typingTimerRef.current)
         typingTimerRef.current = null
       }
-      await sendMessageMutation.mutateAsync({
-        chatId,
-        text: text.trim(),
-        image: selectedImage || undefined,
-      })
+      await sendMessage(chatId, text.trim(), selectedImage || undefined)
       setText("")
       handleRemoveImage()
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to send message")
+    } finally {
+      setIsSending(false)
     }
   }
 
@@ -191,7 +189,7 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
           variant="outline"
           size="icon"
           onClick={() => fileInputRef.current?.click()}
-          disabled={disabled || sendMessageMutation.isPending}
+          disabled={disabled || isSending}
         >
           <ImageIcon className="h-4 w-4" />
         </Button>
@@ -200,15 +198,15 @@ export function MessageInput({ chatId, disabled, isUserTyping, setIsUserTyping }
           value={text}
           onChange={handleSetText}
           onKeyPress={handleKeyPress}
-          disabled={disabled || sendMessageMutation.isPending}
+          disabled={disabled || isSending}
           className="flex-1"
         />
         <Button
           onClick={handleSend}
-          disabled={disabled || sendMessageMutation.isPending || (!text.trim() && !selectedImage)}
+          disabled={disabled || isSending || (!text.trim() && !selectedImage)}
           size="icon"
         >
-          {sendMessageMutation.isPending ? (
+          {isSending ? (
             <div className="h-4 w-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
           ) : (
             <Send className="h-4 w-4" />

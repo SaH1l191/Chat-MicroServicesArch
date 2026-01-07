@@ -133,6 +133,7 @@ export interface IMessage {
     };
     messageType: string;
     messageStatus: boolean;
+    seen: boolean;
     seenAt: Date | null;
     createdAt?: Date;
     updatedAt?: Date;

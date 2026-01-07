@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { useChats, useAllUsers, useCreateChat, type ChatUser } from "@/lib/queries/chat"
+import { useChat, type ChatUser } from "@/providers/ChatProvider"
 import { useUser, useUpdateUserName, useLogout } from "@/lib/queries/user"
 import { Search, MessageSquare, Loader2 } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -23,9 +23,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [newName, setNewName] = useState("")
   const { data: currentUser } = useUser()
-  const { data: chats, isLoading: chatsLoading } = useChats()
-  const { data: allUsers, isLoading: usersLoading } = useAllUsers()
-  const createChatMutation = useCreateChat()
+  const { chats, chatsLoading, allUsers, allUsersLoading, createChat } = useChat()
   const updateNameMutation = useUpdateUserName()
   const logout = useLogout()
   const handleSettings = () => {
@@ -59,7 +57,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
     } else {
       // Create new chat
       try {
-        const result = await createChatMutation.mutateAsync(user._id)
+        const result = await createChat(user._id)
         onSelectChat(result.chatId, user)
       } catch (error) {
         console.error("Failed to create chat:", error)
@@ -114,7 +112,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
           {showAllUsers ? (
             // Show all users when searching
             <div className="p-2">
-              {usersLoading ? (
+              {allUsersLoading ? (
                 <div className="flex items-center justify-center p-4">
                   <Loader2 className="h-5 w-5 animate-spin" />
                 </div>

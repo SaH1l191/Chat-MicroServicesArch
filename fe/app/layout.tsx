@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import "./globals.css"; 
 import { AuthProvider } from "@/providers/AuthProvider";
 import { QueryProvider } from "@/providers/QueryProvider";
-import { SocketProvider } from "@/providers/SocketProvider";
+import { ChatProvider } from "@/providers/ChatProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -33,10 +33,10 @@ export default function RootLayout({
       >
         <QueryProvider>
           <AuthProvider>
-            <SocketProvider>
+            <ChatProvider>
               {children}
               <Toaster />
-            </SocketProvider>
+            </ChatProvider>
           </AuthProvider>
         </QueryProvider>
       </body>

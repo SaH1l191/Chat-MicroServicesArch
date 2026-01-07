@@ -1,9 +1,18 @@
 "use strict";
+var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
+    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
+    return new (P || (P = Promise))(function (resolve, reject) {
+        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
+        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
+        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
+        step((generator = generator.apply(thisArg, _arguments || [])).next());
+    });
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.io = exports.server = exports.app = void 0;
+exports.io = exports.server = exports.app = exports.viewingChatMap = exports.userSocketMap = void 0;
 const express_1 = __importDefault(require("express"));
 const http_1 = __importDefault(require("http"));
 const socket_io_1 = require("socket.io");
@@ -11,6 +20,7 @@ const app = (0, express_1.default)();
 exports.app = app;
 const server = http_1.default.createServer(app);
 exports.server = server;
+const Message_1 = require("../models/Message");
 const io = new socket_io_1.Server(server, {
     cors: {
         origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003',
@@ -19,22 +29,24 @@ const io = new socket_io_1.Server(server, {
     }
 });
 exports.io = io;
-const userSocketMap = {};
+exports.userSocketMap = {};
+exports.viewingChatMap = {};
 io.on('connection', (socket) => {
     console.log('a user connected', socket.id);
     const userId = socket.handshake.query.userId;
     if (userId && userId !== null) {
-        userSocketMap[userId] = socket.id;
+        exports.userSocketMap[userId] = socket.id;
         console.log(`User ${userId} is connected with socket id ${socket.id}`);
     }
-    io.emit('getOnlineUsers', Object.keys(userSocketMap));
+    io.emit('getOnlineUsers', Object.keys(exports.userSocketMap));
     socket.on('disconnect', () => {
         console.log('User disconnected', socket.id);
-        for (const userId in userSocketMap) {
-            if (userSocketMap[userId] === socket.id) {
+        for (const userId in exports.userSocketMap) {
+            if (exports.userSocketMap[userId] === socket.id) {
                 console.log("User disconnected", userId, "with socket id ", socket.id);
-                delete userSocketMap[userId];
-                io.emit('getOnlineUsers', Object.keys(userSocketMap));
+                delete exports.userSocketMap[userId];
+                delete exports.viewingChatMap[userId];
+                io.emit('getOnlineUsers', Object.keys(exports.userSocketMap));
                 break;
             }
         }
@@ -42,13 +54,34 @@ io.on('connection', (socket) => {
     socket.on('connect-error', (error) => {
         console.log('Connect error', error);
     });
+    // Handle joining chat room
     socket.on('join:chat', (chatId) => {
         socket.join(`chat:${chatId}`);
+        const userId = socket.handshake.query.userId;
         console.log(`User ${userId} joined chat room: chat:${chatId}`);
+        // Notify others in the room that this user joined
+        socket.to(`chat:${chatId}`).emit('user:joined:room', { chatId, userId });
     });
     socket.on('leave:chat', (chatId) => {
         socket.leave(`chat:${chatId}`);
+        const userId = socket.handshake.query.userId;
         console.log(`User ${userId} left chat room: chat:${chatId}`);
+    });
+    // Track which chat a user is currently viewing
+    socket.on('viewing:chat', (chatId) => {
+        const userId = socket.handshake.query.userId;
+        if (userId) {
+            exports.viewingChatMap[userId] = chatId;
+            console.log(`User ${userId} is now viewing chat: ${chatId}`);
+        }
+    });
+    // Track when user stops viewing a chat
+    socket.on('not:viewing:chat', () => {
+        const userId = socket.handshake.query.userId;
+        if (userId) {
+            delete exports.viewingChatMap[userId];
+            console.log(`User ${userId} stopped viewing chat`);
+        }
     });
     socket.on('typing:start', (data) => {
         const { chatId, userId } = data;
@@ -58,4 +91,19 @@ io.on('connection', (socket) => {
         const { chatId, userId } = data;
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: false });
     });
+    // Handle message sent event (from frontend after API call)
+    socket.on('message:sent', (data) => {
+        const { chatId, message, senderId } = data;
+        // Emit to all users in the chat room (including sender for consistency)
+        io.to(`chat:${chatId}`).emit('message:new', { message, chatId, senderId });
+    });
+    // Handle read receipts
+    socket.on('message:read', (data) => __awaiter(void 0, void 0, void 0, function* () {
+        const { chatId, messageIds } = data;
+        const userId = socket.handshake.query.userId;
+        if (!userId)
+            return;
+        yield Message_1.Message.updateMany({ _id: { $in: messageIds }, chatId }, { seen: true, seenAt: new Date() });
+        socket.to(`chat:${chatId}`).emit('message:read', { chatId, messageIds });
+    }));
 });
