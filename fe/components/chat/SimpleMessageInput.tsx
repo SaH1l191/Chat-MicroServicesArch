@@ -28,21 +28,23 @@ export function MessageInput({ chatId, disabled }: MessageInputProps) {
 
   const startTyping = () => {
     if (!socket || !chatId || !currentUser?._id) return
-    if (isTypingRef.current) return
+    if (isTypingRef.current === true) return
     isTypingRef.current = true
     socket.emit("typing:start", { chatId, userId: currentUser._id })
   }
 
   const stopTyping = () => {
     if (!socket || !chatId || !currentUser?._id) return
-    if (!isTypingRef.current) return
+    if (isTypingRef.current === false) return
     isTypingRef.current = false
     socket.emit("typing:stop", { chatId, userId: currentUser._id })
   }
 
   const scheduleStopTyping = () => {
-    if (typingTimerRef.current) clearTimeout(typingTimerRef.current)
-    typingTimerRef.current = setTimeout(() => {
+    //egdeacase if there is some preivous timeout , clear it
+    if (typingTimerRef.current !== null) clearTimeout(typingTimerRef.current)
+      //set a fresh timeout here for current typed letter which stops typing after 4 seconds
+      typingTimerRef.current = setTimeout(() => {
       stopTyping()
       typingTimerRef.current = null
     }, 4000)

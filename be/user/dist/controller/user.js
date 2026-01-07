@@ -93,13 +93,13 @@ const verifyUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             yield __1.redisClient.set(`refresh:${user._id.toString()}`, refreshToken, { EX: 15 * 24 * 60 * 60 });
             res.cookie("accessToken", accessToken, {
                 httpOnly: true,
-                sameSite: "lax", // instead of "strict"
+                sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
                 secure: false,
                 maxAge: 15 * 60 * 1000 // 15 days
             });
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                sameSite: "lax",
+                sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
                 secure: false,
                 maxAge: 15 * 24 * 60 * 60 * 1000
             });
@@ -115,14 +115,14 @@ const verifyUser = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
             yield __1.redisClient.set(`refresh:${user._id}`, refreshToken, { EX: 15 * 24 * 60 * 60 });
             res.cookie("accessToken", accessToken, {
                 httpOnly: true,
-                sameSite: "lax",
-                secure: process.env.NODE_ENV === "production",
+                sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
+                secure: process.env.CODEBASE === "production",
                 maxAge: 15 * 60 * 1000
             });
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                sameSite: "lax",
-                secure: process.env.NODE_ENV === "production",
+                sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
+                secure: process.env.CODEBASE === "production",
                 maxAge: 15 * 24 * 60 * 60 * 1000
             });
             return res.status(200).json({
@@ -176,7 +176,7 @@ const refreshAccessToken = (req, res) => __awaiter(void 0, void 0, void 0, funct
         const newAccessToken = (0, token_1.signAccessToken)(user);
         res.cookie("accessToken", newAccessToken, {
             httpOnly: true,
-            sameSite: "lax",
+            sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
             secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 60 * 1000
         });
@@ -239,13 +239,13 @@ const updateName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         // Set new cookies
         res.cookie("accessToken", accessToken, {
             httpOnly: true,
-            sameSite: "lax",
+            sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
             secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 60 * 1000
         });
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            sameSite: "lax",
+            sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
             secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 24 * 60 * 60 * 1000
         });

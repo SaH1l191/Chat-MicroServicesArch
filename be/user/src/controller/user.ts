@@ -96,14 +96,14 @@ export const verifyUser = async (req: Request, res: Response) => {
 
             res.cookie("accessToken", accessToken, {
                 httpOnly: true,
-                sameSite: "lax",  // instead of "strict"
+                 sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
                 secure: false,
                 maxAge: 15 * 60 * 1000// 15 days
             });
 
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                sameSite: "lax",
+                 sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
                 secure: false,
                 maxAge: 15 * 24 * 60 * 60 * 1000
             });
@@ -121,15 +121,15 @@ export const verifyUser = async (req: Request, res: Response) => {
 
             res.cookie("accessToken", accessToken, {
                 httpOnly: true,
-                sameSite: "lax",
-                secure: process.env.NODE_ENV === "production",
+                sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
+                secure: process.env.CODEBASE === "production",
                 maxAge: 15 * 60 * 1000
             });
 
             res.cookie("refreshToken", refreshToken, {
                 httpOnly: true,
-                sameSite: "lax",
-                secure: process.env.NODE_ENV === "production",
+                sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
+                secure: process.env.CODEBASE === "production",
                 maxAge: 15 * 24 * 60 * 60 * 1000
             });
 
@@ -193,7 +193,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
 
         res.cookie("accessToken", newAccessToken, {
             httpOnly: true,
-            sameSite: "lax",
+             sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
             secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 60 * 1000
         });
@@ -267,14 +267,14 @@ export const updateName = async (req: AuthRequest, res: Response) => {
         // Set new cookies
         res.cookie("accessToken", accessToken, {
             httpOnly: true,
-            sameSite: "lax",
+             sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
             secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 60 * 1000
         });
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
-            sameSite: "lax",
+             sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
             secure: process.env.NODE_ENV === "production",
             maxAge: 15 * 24 * 60 * 60 * 1000
         });

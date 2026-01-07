@@ -42,8 +42,7 @@ export default function ChatLayout({
   const handleSelectChat = (chatId: string, user: ChatUser) => {
     // Don't leave previous chat - we want to stay in all chat rooms to receive typing events
     setSelectedChatId(chatId)
-    setSelectedUser(user)
-    // Ensure we're in this chat room (should already be joined from initial load, but just in case)
+    setSelectedUser(user) 
     if (socket && chatId) {
       socket.emit('join:chat', chatId)
     }
@@ -60,6 +59,7 @@ export default function ChatLayout({
   useEffect(() => {
     if (!socket || !chats || !currentUser?._id) return
     const typingTimeouts: Record<string, NodeJS.Timeout> = {}
+
     const handleTypingStatus = (data: { chatId: string; userId: string; isTyping: boolean }) => { 
       const chat = chats.find(c => c.chat._id === data.chatId)
       if (!chat) return
@@ -94,7 +94,7 @@ export default function ChatLayout({
       }
     }
 
-    socket.on('typing:status', handleTypingStatus)
+    socket.on('typing:status', handleTypingStatus) // this gets teh chatid,userId,isTyping from socker server automatically
 
     return () => {
       socket.off('typing:status', handleTypingStatus)

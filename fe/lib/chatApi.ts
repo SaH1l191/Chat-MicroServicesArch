@@ -32,8 +32,6 @@ chatApi.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config
-
-
     const isRefreshEndpoint = originalRequest.url?.includes("/auth/refresh") ||
       originalRequest.url?.includes("/api/v1/auth/refresh")
 
@@ -59,17 +57,6 @@ chatApi.interceptors.response.use(
       isRefreshing = true
 
       try {
-
-        const refreshResponse = await axios.get(
-          
-          `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3001"}/api/v1/auth/refresh`,
-          {
-            withCredentials: true,
-            headers: {
-              "Content-Type": "application/json",
-            },
-          }
-        )
         // processQueue(null)
         isRefreshing = false
         // Retry the original request
@@ -79,7 +66,6 @@ chatApi.interceptors.response.use(
         if (window.location.pathname !== "/login") {
           window.location.href = "/login"
         }
-
         return Promise.reject(refreshError)
       }
     }
