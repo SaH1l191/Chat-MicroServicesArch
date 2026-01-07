@@ -194,7 +194,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
         res.cookie("accessToken", newAccessToken, {
             httpOnly: true,
              sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production",
+            secure: process.env.CODEBASE === "production",
             maxAge: 15 * 60 * 1000
         });
 
@@ -268,14 +268,14 @@ export const updateName = async (req: AuthRequest, res: Response) => {
         res.cookie("accessToken", accessToken, {
             httpOnly: true,
              sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production",
+            secure: process.env.CODEBASE === "production",
             maxAge: 15 * 60 * 1000
         });
 
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
              sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production",
+            secure: process.env.CODEBASE === "production",
             maxAge: 15 * 24 * 60 * 60 * 1000
         });
 

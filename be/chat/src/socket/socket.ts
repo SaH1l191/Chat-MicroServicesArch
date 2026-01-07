@@ -6,7 +6,7 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
     cors: {
-        origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003', // Next.js default port
+        origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003', 
         credentials: true,
         methods: ['GET', 'POST']
     }
@@ -14,9 +14,7 @@ const io = new Server(server, {
 const userSocketMap: Record<string, string> = {}
 
 
-// socket refers to current client 
-io.on('connection', (socket: Socket) => {
-    console.log("socket Objc", socket)
+io.on('connection', (socket: Socket) => { 
     console.log('a user connected', socket.id)
     const userId = socket.handshake.query.userId as string | undefined
     if (userId && userId !== null) {
@@ -57,13 +55,11 @@ io.on('connection', (socket: Socket) => {
  
     socket.on('typing:start', (data: { chatId: string; userId: string }) => {
         const { chatId, userId } = data
-        // Emit to all users in this chat room except the sender
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: true })
     })
 
     socket.on('typing:stop', (data: { chatId: string; userId: string }) => {
         const { chatId, userId } = data
-        // Notify room that user stopped typing (do not leave the room)
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: false })
     })
 })

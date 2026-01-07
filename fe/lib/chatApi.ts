@@ -1,7 +1,7 @@
 import axios from "axios"
 
 const chatApi = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_CHAT_API_URL || "http://localhost:3002",
+  baseURL: process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_PUBLIC_CHAT_API_URL : "http://localhost:3002",
   withCredentials: true,
   headers: {
     "Content-Type": "application/json",

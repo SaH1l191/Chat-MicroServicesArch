@@ -70,7 +70,9 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
                     seen: false
                 })
                 try {
-                    const { data } = await axios.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
+
+                    const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000"
+                    const { data } = await axios.get(`${baseUrl}/api/v1/user/${otherUserId}`)
                     // console.log(`api to : ${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
                     // console.log("Data from user service ", data)
                     // Extract user from response - user service returns { user: {...} }
@@ -229,7 +231,8 @@ export const getMessageByChat = async (req: AuthRequest, res: Response) => {
         }
         
         try {
-            const { data } = await axios.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
+            const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000"
+            const { data } = await axios.get(`${baseUrl}/api/v1/user/${otherUserId}`)
             console.log("Data from user Serivce for other user ", data )
             // Extract user from response - user service returns { user: {...} } or direct user object
             const userData = data.user || data

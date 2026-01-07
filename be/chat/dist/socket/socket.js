@@ -13,16 +13,14 @@ const server = http_1.default.createServer(app);
 exports.server = server;
 const io = new socket_io_1.Server(server, {
     cors: {
-        origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003', // Next.js default port
+        origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003',
         credentials: true,
         methods: ['GET', 'POST']
     }
 });
 exports.io = io;
 const userSocketMap = {};
-// socket refers to current client 
 io.on('connection', (socket) => {
-    console.log("socket Objc", socket);
     console.log('a user connected', socket.id);
     const userId = socket.handshake.query.userId;
     if (userId && userId !== null) {
@@ -54,12 +52,10 @@ io.on('connection', (socket) => {
     });
     socket.on('typing:start', (data) => {
         const { chatId, userId } = data;
-        // Emit to all users in this chat room except the sender
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: true });
     });
     socket.on('typing:stop', (data) => {
         const { chatId, userId } = data;
-        // Notify room that user stopped typing (do not leave the room)
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: false });
     });
 });

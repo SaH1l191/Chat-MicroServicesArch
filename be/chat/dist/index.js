@@ -15,7 +15,7 @@ dotenv_1.default.config();
 // because app used for routing , socket used for websockets 
 socket_1.app.use((0, cors_1.default)({
     origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003',
-    credentials: true, // Important for httpOnly cookies
+    credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));

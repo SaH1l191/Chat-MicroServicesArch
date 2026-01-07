@@ -177,7 +177,7 @@ const refreshAccessToken = (req, res) => __awaiter(void 0, void 0, void 0, funct
         res.cookie("accessToken", newAccessToken, {
             httpOnly: true,
             sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production",
+            secure: process.env.CODEBASE === "production",
             maxAge: 15 * 60 * 1000
         });
         res.json({ message: "Access token refreshed" });
@@ -240,13 +240,13 @@ const updateName = (req, res) => __awaiter(void 0, void 0, void 0, function* () 
         res.cookie("accessToken", accessToken, {
             httpOnly: true,
             sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production",
+            secure: process.env.CODEBASE === "production",
             maxAge: 15 * 60 * 1000
         });
         res.cookie("refreshToken", refreshToken, {
             httpOnly: true,
             sameSite: process.env.CODEBASE === "production" ? "none" : "lax",
-            secure: process.env.NODE_ENV === "production",
+            secure: process.env.CODEBASE === "production",
             maxAge: 15 * 24 * 60 * 60 * 1000
         });
         res.json({

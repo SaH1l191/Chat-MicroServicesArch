@@ -39,11 +39,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         // Create socket connection
         const socket = io(socketUrl, {
             withCredentials: true,
-            // transports: ["websocket", "polling"],
-            // reconnection: true,
-            // reconnectionDelay: 1000,
-            // reconnectionAttempts: 5,
-            // reconnectionDelayMax: 5000,
             query: {
                 userId: user?._id
             }
@@ -53,27 +48,6 @@ export function SocketProvider({ children }: { children: ReactNode }) {
         socket.on('getOnlineUsers', (users: string[]) => {
             setOnlineUsers(users)
         })
-
-        // Connection event handlers
-        // socket.on("connect", () => {
-        //     console.log("Socket connected:", socket.id)
-        //     setIsConnected(true)
-
-        //     // Optionally emit user info to server
-        //     // socket.emit("user:join", { userId: user._id })
-        // })
-
-        // socket.on("disconnect", () => {
-        //     console.log("Socket disconnected")
-        //     setIsConnected(false)
-        // })
-
-        // socket.on("connect_error", (error) => {
-        //     console.error("Socket connection error:", error)
-        //     setIsConnected(false)
-        // })
-
-        // Cleanup on unmount or user change
         return () => {
             if (socket) {
                 socket.disconnect()

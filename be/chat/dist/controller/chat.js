@@ -79,7 +79,8 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 seen: false
             });
             try {
-                const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
+                const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000";
+                const { data } = yield axios_1.default.get(`${baseUrl}/api/v1/user/${otherUserId}`);
                 // console.log(`api to : ${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
                 // console.log("Data from user service ", data)
                 // Extract user from response - user service returns { user: {...} }
@@ -221,7 +222,8 @@ const getMessageByChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
             return res.status(404).json({ message: "No Other User" });
         }
         try {
-            const { data } = yield axios_1.default.get(`${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`);
+            const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000";
+            const { data } = yield axios_1.default.get(`${baseUrl}/api/v1/user/${otherUserId}`);
             console.log("Data from user Serivce for other user ", data);
             // Extract user from response - user service returns { user: {...} } or direct user object
             const userData = data.user || data;

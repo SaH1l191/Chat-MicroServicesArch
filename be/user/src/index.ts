@@ -13,7 +13,7 @@ const app = express()
 // CORS configuration - allow requests from frontend
 app.use(cors({
     origin: process.env.CODEBASE === "production" ? process.env.FRONTEND_URL : 'http://localhost:3003', // Next.js default port
-    credentials: true, // Important for httpOnly cookies
+    credentials: true, 
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }))
