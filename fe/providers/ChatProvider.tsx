@@ -169,6 +169,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         }
         return chatWithUser
       }))
+      console.log("active RoomRef  ",activeChatRoomsRef.current)
     })
 
      
