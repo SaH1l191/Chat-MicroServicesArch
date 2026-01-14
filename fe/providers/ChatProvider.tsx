@@ -90,7 +90,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const [onlineUsers, setOnlineUsers] = useState<string[]>([])
   const [chats, setChats] = useState<ChatWithUser[]>([])
   const [chatsLoading, setChatsLoading] = useState(false)
-  const [messages, setMessages] = useState<Record<string, { messages: Message[]; user: ChatUser | null }>>({})
+  const [messages, setMessages] = useState<Record<string, { messages: Message[]; user: ChatUser | null }>>({}) // chatId : messages[],usrs(sender)
   const [messagesLoading, setMessagesLoading] = useState<Record<string, boolean>>({})
   const [typingStatus, setTypingStatus] = useState<Record<string, boolean>>({})
   const [allUsers, setAllUsers] = useState<ChatUser[]>([])
@@ -128,32 +128,26 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       const { message, chatId, senderId } = data
       
       setMessages(prev => {
-        const existing = prev[chatId]
-        if (existing) {
-          const messageExists = existing.messages.some(m => m._id === message._id)
-          if (messageExists) {
-            return {
-              ...prev,
-              [chatId]: {
-                ...existing,
-                messages: existing.messages.map(m => 
-                  m._id === message._id ? message : m
-                )
-              }
-            }
-          }
-          return {
-            ...prev,
-            [chatId]: {
-              ...existing,
-              messages: [...existing.messages, message]
-            }
+        const chat = prev[chatId]
+        if (!chat) return prev
+      
+        const index = chat.messages.findIndex(m => m._id === message._id)
+      
+        const updatedMessages =
+          index >= 0
+            ? chat.messages.map(m => m._id === message._id ? message : m)
+            : [...chat.messages, message]
+      
+        return {
+          ...prev,
+          [chatId]: {
+            ...chat,
+            messages: updatedMessages
           }
         }
-        return prev
       })
 
-  
+      //updating the chatupdatation by iterating on all 
       setChats(prev => prev.map(chatWithUser => {
         if (chatWithUser.chat._id === chatId) {
           const latestMessageText = message.image ? "📷 Image" : (message.text || "")
@@ -168,7 +162,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
               updatedAt: message.createdAt,
               // Increment unseen count if message is from other user and not seen
               unseenCount: senderId !== user._id && !message.seen 
-                ? (chatWithUser.chat.unseenCount || 0) + 1 
+                ? (chatWithUser.chat.unseenCount )  + 1 
                 : chatWithUser.chat.unseenCount
             }
           }
@@ -177,7 +171,30 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       }))
     })
 
+     
+    socket.on('chat:new', (data: { chatId: string; createdBy: string }) => {
+      const { chatId } = data
+      //eg : when someone creates chat  ,socket will notify both users to create a chat
+      fetchChats() 
+      if (socketRef.current && !activeChatRoomsRef.current.has(chatId)) {
+        socketRef.current.emit('join:chat', chatId)
+        activeChatRoomsRef.current.add(chatId)
+      }
+    })
+ 
+    socket.on('chat:refresh', (data: { chatId: string; message: Message }) => {
+      const { chatId } = data 
+      fetchChats()
+       //refetching becauz here some new user has new chat => and published msg then other user needs to be updated ]
+      //by refresghing 
+      if (socketRef.current && !activeChatRoomsRef.current.has(chatId)) {
+        socketRef.current.emit('join:chat', chatId)
+        activeChatRoomsRef.current.add(chatId)
+      }
+    })
+
     socket.on('message:read', (data: { chatId: string; messageIds: string[] }) => {
+      //receiver will see blue tick here 
       const { chatId, messageIds } = data
       setMessages(prev => {
         const existing = prev[chatId]
@@ -328,7 +345,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           }
         }
       })
-
+      
       setChats(prev => prev.map(chatWithUser => 
         chatWithUser.chat._id === chatId
           ? { ...chatWithUser, chat: data.chat }
@@ -342,6 +359,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           senderId: user?._id
         })
       }
+      
     } catch (error) {
       console.error("Error sending message:", error)
       throw error
@@ -352,9 +370,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     const { data } = await chatApi.post<{ chatId: string; message?: string }>("/api/v1/chat/new", {
       otherUserId,
     })
-    
     await fetchChats()
-    
     return { chatId: data.chatId }
   }, [fetchChats])
 

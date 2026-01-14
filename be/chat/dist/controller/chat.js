@@ -24,7 +24,9 @@ const createNewChat = (req, res) => __awaiter(void 0, void 0, void 0, function* 
     try {
         const userId = (_a = req === null || req === void 0 ? void 0 : req.user) === null || _a === void 0 ? void 0 : _a._id;
         const { otherUserId } = req.body;
-        // 2:21:51//
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required" });
+        }
         if (!otherUserId) {
             return res.status(400).json({ message: "Other user ID is required" });
         }
@@ -40,6 +42,13 @@ const createNewChat = (req, res) => __awaiter(void 0, void 0, void 0, function* 
         const newChat = yield Chat_1.Chat.create({
             users: [userId, otherUserId]
         });
+        const otherUserSocketId = socket_1.userSocketMap[otherUserId.toString()];
+        if (otherUserSocketId) {
+            socket_1.io.to(otherUserSocketId).emit('chat:new', {
+                chatId: newChat._id.toString(),
+                createdBy: userId.toString()
+            });
+        }
         return res.status(200).json({
             message: "New Chat Created",
             chatId: newChat._id
@@ -64,16 +73,7 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         // faster response time than sequential await
         // console.log("Chats : ",chats)
         const chatWithUserData = yield Promise.all(chats.map((chat) => __awaiter(void 0, void 0, void 0, function* () {
-            const otherUserId = chat.users.find((id) => id !== userId);
-            // Check if the other user has sent any messages in this chat
-            const hasMessagesFromOtherUser = yield Message_1.Message.exists({
-                chatId: chat._id,
-                sender: otherUserId
-            });
-            // Only include chats where the other user has sent messages
-            if (!hasMessagesFromOtherUser) {
-                return null;
-            }
+            const otherUserId = chat.users.find((id) => id.toString() !== userId.toString());
             const unseenCount = yield Message_1.Message.countDocuments({
                 chatId: chat._id,
                 sender: { $ne: userId },
@@ -102,7 +102,7 @@ const getAllChats = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
                 };
             }
         })));
-        // Filter out null values (chats where other user hasn't sent messages)
+        // no empty chats 
         const filteredChats = chatWithUserData.filter((chat) => chat !== null);
         // console.log("chatWithUserData : ",filteredChats)
         return res.json({
@@ -173,19 +173,25 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
             },
             updatedAt: new Date()
         }, { new: true });
-        // Fetch all updated messages for this chat (ascending order)
         const messages = yield Message_1.Message.find({ chatId }).sort({ createdAt: 1 });
-        // Emit socket event for new message
         socket_1.io.to(`chat:${chatId}`).emit('message:new', {
             message: savedMessage,
             chatId,
             senderId
         });
-        // receiver is online +  viewing
+        // Notify receiver to refresh their chat list (for new chats or when they're not aware of the chat)
         const receiverSocketId = socket_1.userSocketMap[otherUserId.toString()];
+        if (receiverSocketId) {
+            socket_1.io.to(receiverSocketId).emit('chat:refresh', {
+                chatId,
+                message: savedMessage
+            });
+        }
+        // receiver is online +  viewing
         const receiverViewingChat = socket_1.viewingChatMap[otherUserId.toString()];
         // Check if receiver is online +  viewing => mark seen immediately
         if (receiverSocketId && receiverViewingChat === chatId) {
+            //each socket has its room set 
             const receiverSocket = socket_1.io.sockets.sockets.get(receiverSocketId);
             if (receiverSocket) {
                 const isInRoom = Array.from(receiverSocket.rooms).includes(`chat:${chatId}`);
@@ -253,7 +259,6 @@ const getMessageByChat = (req, res) => __awaiter(void 0, void 0, void 0, functio
         try {
             const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000";
             const { data } = yield axios_1.default.get(`${baseUrl}/api/v1/user/${otherUserId}`);
-            // Extract user from response - user service returns { user: {...} } or direct user object
             const userData = data.user || data;
             return res.status(200).json({
                 messages,

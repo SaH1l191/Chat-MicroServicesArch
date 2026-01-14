@@ -84,6 +84,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
         chat.user.email.toLowerCase().includes(searchQuery.toLowerCase())
     )
 
+ 
   return (
     <div className="flex flex-col h-full border-r bg-background">
       <div className="flex flex-col flex-1">

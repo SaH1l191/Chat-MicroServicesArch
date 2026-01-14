@@ -12,7 +12,10 @@ export const createNewChat = async (req: AuthRequest, res: Response) => {
     try {
         const userId = req?.user?._id;
         const { otherUserId } = req.body;
-        // 2:21:51//
+
+        if (!userId) {
+            return res.status(400).json({ message: "User ID is required" })
+        }
         if (!otherUserId) {
             return res.status(400).json({ message: "Other user ID is required" })
         }
@@ -28,6 +31,15 @@ export const createNewChat = async (req: AuthRequest, res: Response) => {
         const newChat = await Chat.create({
             users: [userId, otherUserId]
         })
+
+        const otherUserSocketId = userSocketMap[otherUserId.toString()]
+        if (otherUserSocketId) {
+            io.to(otherUserSocketId).emit('chat:new', {
+                chatId: newChat._id.toString(),
+                createdBy: userId.toString()
+            })
+        }
+
         return res.status(200).json({
             message: "New Chat Created",
             chatId: newChat._id
@@ -53,26 +65,15 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
         // console.log("Chats : ",chats)
         const chatWithUserData = await Promise.all(
             chats.map(async (chat) => {
-                const otherUserId = chat.users.find((id) => id !== userId)
-
-                // Check if the other user has sent any messages in this chat
-                const hasMessagesFromOtherUser = await Message.exists({
-                    chatId: chat._id,
-                    sender: otherUserId
-                })
-
-                // Only include chats where the other user has sent messages
-                if (!hasMessagesFromOtherUser) {
-                    return null
-                }
-
+                const otherUserId = chat.users.find(
+                    (id) => id.toString() !== userId.toString()
+                )
                 const unseenCount = await Message.countDocuments({
                     chatId: chat._id,
                     sender: { $ne: userId },
                     seen: false
                 })
                 try {
-
                     const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000"
                     const { data } = await axios.get(`${baseUrl}/api/v1/user/${otherUserId}`)
                     // console.log(`api to : ${process.env.USER_SERVICE}/api/v1/user/${otherUserId}`)
@@ -105,7 +106,7 @@ export const getAllChats = async (req: AuthRequest, res: Response) => {
             })
         )
 
-        // Filter out null values (chats where other user hasn't sent messages)
+        // no empty chats 
         const filteredChats = chatWithUserData.filter((chat) => chat !== null)
 
         // console.log("chatWithUserData : ",filteredChats)
@@ -177,22 +178,30 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
             updatedAt: new Date()
         }, { new: true })
 
-        // Fetch all updated messages for this chat (ascending order)
+
         const messages = await Message.find({ chatId }).sort({ createdAt: 1 })
 
-        // Emit socket event for new message
         io.to(`chat:${chatId}`).emit('message:new', {
             message: savedMessage,
             chatId,
             senderId
         })
 
-        // receiver is online +  viewing
+        // Notify receiver to refresh their chat list (for new chats or when they're not aware of the chat)
         const receiverSocketId = userSocketMap[otherUserId.toString()]
+        if (receiverSocketId) {
+            io.to(receiverSocketId).emit('chat:refresh', {
+                chatId,
+                message: savedMessage
+            })
+        }
+
+        // receiver is online +  viewing
         const receiverViewingChat = viewingChatMap[otherUserId.toString()]
-        
+
         // Check if receiver is online +  viewing => mark seen immediately
         if (receiverSocketId && receiverViewingChat === chatId) {
+            //each socket has its room set 
             const receiverSocket = io.sockets.sockets.get(receiverSocketId)
             if (receiverSocket) {
                 const isInRoom = Array.from(receiverSocket.rooms).includes(`chat:${chatId}`)
@@ -264,8 +273,7 @@ export const getMessageByChat = async (req: AuthRequest, res: Response) => {
 
         try {
             const baseUrl = process.env.NEXT_PUBLIC_CODEBASE === "production" ? process.env.NEXT_USER_SERVICE_APP_URL : "http://localhost:3000"
-            const { data } = await axios.get(`${baseUrl}/api/v1/user/${otherUserId}`)
-            // Extract user from response - user service returns { user: {...} } or direct user object
+            const { data } = await axios.get(`${baseUrl}/api/v1/user/${otherUserId}`) 
             const userData = data.user || data
             return res.status(200).json({
                 messages,

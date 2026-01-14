@@ -29,8 +29,8 @@ const io = new socket_io_1.Server(server, {
     }
 });
 exports.io = io;
-exports.userSocketMap = {};
-exports.viewingChatMap = {};
+exports.userSocketMap = {}; // userID : socketId
+exports.viewingChatMap = {}; // userID : chatId (user watching which chatId)
 io.on('connection', (socket) => {
     console.log('a user connected', socket.id);
     const userId = socket.handshake.query.userId;
@@ -54,12 +54,10 @@ io.on('connection', (socket) => {
     socket.on('connect-error', (error) => {
         console.log('Connect error', error);
     });
-    // Handle joining chat room
     socket.on('join:chat', (chatId) => {
         socket.join(`chat:${chatId}`);
         const userId = socket.handshake.query.userId;
         console.log(`User ${userId} joined chat room: chat:${chatId}`);
-        // Notify others in the room that this user joined
         socket.to(`chat:${chatId}`).emit('user:joined:room', { chatId, userId });
     });
     socket.on('leave:chat', (chatId) => {
@@ -67,7 +65,6 @@ io.on('connection', (socket) => {
         const userId = socket.handshake.query.userId;
         console.log(`User ${userId} left chat room: chat:${chatId}`);
     });
-    // Track which chat a user is currently viewing
     socket.on('viewing:chat', (chatId) => {
         const userId = socket.handshake.query.userId;
         if (userId) {
@@ -75,7 +72,6 @@ io.on('connection', (socket) => {
             console.log(`User ${userId} is now viewing chat: ${chatId}`);
         }
     });
-    // Track when user stops viewing a chat
     socket.on('not:viewing:chat', () => {
         const userId = socket.handshake.query.userId;
         if (userId) {
@@ -91,13 +87,10 @@ io.on('connection', (socket) => {
         const { chatId, userId } = data;
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: false });
     });
-    // Handle message sent event (from frontend after API call)
     socket.on('message:sent', (data) => {
         const { chatId, message, senderId } = data;
-        // Emit to all users in the chat room (including sender for consistency)
         io.to(`chat:${chatId}`).emit('message:new', { message, chatId, senderId });
     });
-    // Handle read receipts
     socket.on('message:read', (data) => __awaiter(void 0, void 0, void 0, function* () {
         const { chatId, messageIds } = data;
         const userId = socket.handshake.query.userId;

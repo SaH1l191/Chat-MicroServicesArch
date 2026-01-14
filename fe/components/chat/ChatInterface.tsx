@@ -28,6 +28,7 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
   useEffect(() => {
     if (chatId) {
       fetchMessages(chatId)
+      
     }
 
     // Cleanup: notify backend when user stops viewing this chat
@@ -38,7 +39,7 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
     }
   }, [chatId, fetchMessages, socket])
 
-
+  console.log("messages " , messages)
 
 
 
