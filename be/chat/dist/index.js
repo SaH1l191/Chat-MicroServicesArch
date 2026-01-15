@@ -10,6 +10,8 @@ const route_1 = __importDefault(require("./routes/route"));
 const cookie_parser_1 = __importDefault(require("cookie-parser"));
 const cors_1 = __importDefault(require("cors"));
 const socket_1 = require("./socket/socket");
+const rabbitmq_1 = require("./config/rabbitmq");
+const messageWorker_1 = require("./workers/messageWorker");
 dotenv_1.default.config();
 //mounting everything on app except need to listen on server 
 // because app used for routing , socket used for websockets 
@@ -23,6 +25,12 @@ socket_1.app.use(express_1.default.json());
 socket_1.app.use((0, cookie_parser_1.default)());
 socket_1.app.use('/api/v1', route_1.default);
 (0, db_1.default)();
+(0, rabbitmq_1.connectRabbitMq)().then(() => {
+    (0, messageWorker_1.startMessageWorker)();
+    console.log('Message worker started');
+}).catch((error) => {
+    console.error('Failed to start message worker:', error);
+});
 const PORT = process.env.PORT || 3000;
 socket_1.server.listen(PORT, () => {
     console.log(`Chat service listening at port ${PORT}`);

@@ -85,11 +85,8 @@ io.on('connection', (socket: Socket) => {
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: false })
     })
 
-    socket.on('message:sent', (data: { chatId: string; message: any; senderId: string }) => {
-        const { chatId, message, senderId } = data
-
-        io.to(`chat:${chatId}`).emit('message:new', { message, chatId, senderId })
-    })
+    // Removed 'message:sent' handler - worker now handles WebSocket delivery
+    // This prevents duplicate message emissions
 
     socket.on('message:read', async (data: { chatId: string; messageIds: string[] }) => {
         const { chatId, messageIds } = data

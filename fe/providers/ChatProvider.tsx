@@ -5,6 +5,7 @@ import { io, Socket } from "socket.io-client"
 import chatApi from "@/lib/chatApi"
 import api from "@/lib/axios"
 import { useUser } from "@/lib/queries/user"
+import { useMessageWorker } from "@/hooks/useMessageWorker"
 
 // Types
 export interface ChatUser {
@@ -131,10 +132,12 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         const chat = prev[chatId]
         if (!chat) return prev
       
-        const index = chat.messages.findIndex(m => m._id === message._id)
-      
+        // Check if message already exists to prevent duplicates
+        const existingIndex = chat.messages.findIndex(m => m._id === message._id)
+        
+        // If message already exists, update it; otherwise add it
         const updatedMessages =
-          index >= 0
+          existingIndex >= 0
             ? chat.messages.map(m => m._id === message._id ? message : m)
             : [...chat.messages, message]
       
@@ -306,15 +309,27 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         socketRef.current.emit('viewing:chat', chatId)
       }
 
+      // Update chat list to reflect latest message info
       fetchChats()
     } catch (error) {
       console.error("Error fetching messages:", error)
     } finally {
       setMessagesLoading(prev => ({ ...prev, [chatId]: false }))
     }
-  }, [user?._id, onlineUsers, fetchChats])
+  }, [user?._id, fetchChats])
 
-  const sendMessage = useCallback(async (chatId: string, text: string, image?: File) => {
+  // Message worker for queuing messages off main thread
+  const { queueMessage } = useMessageWorker(
+    async (queuedMessage) => {
+      // Process message from worker queue
+      await handleSendMessage(queuedMessage.chatId, queuedMessage.text || '', queuedMessage.image);
+    },
+    (error) => {
+      console.error("Message worker error:", error);
+    }
+  );
+
+  const handleSendMessage = useCallback(async (chatId: string, text: string, image?: File) => {
     if (!chatId || (!text.trim() && !image)) return
 
     const formData = new FormData()
@@ -335,13 +350,42 @@ export function ChatProvider({ children }: { children: ReactNode }) {
         },
       })
 
+      // Update messages from API response
+      // Worker will also send via WebSocket, but we deduplicate by _id
       setMessages(prev => {
         const existing = prev[chatId]
+        
+        // Create a map for deduplication by _id
+        const messageMap = new Map<string, Message>()
+        
+        // Add existing messages first
+        if (existing?.messages) {
+          existing.messages.forEach(msg => {
+            if (msg._id) {
+              messageMap.set(msg._id, msg)
+            }
+          })
+        }
+        
+        // Add/update with new messages from API (newer messages override older ones)
+        data.messages.forEach(msg => {
+          if (msg._id) {
+            messageMap.set(msg._id, msg)
+          }
+        })
+        
+        // Convert back to array and sort by createdAt
+        const deduplicatedMessages = Array.from(messageMap.values()).sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0
+          return dateA - dateB
+        })
+        
         return {
           ...prev,
           [chatId]: {
             ...existing,
-            messages: data.messages,
+            messages: deduplicatedMessages,
             user: existing?.user || null
           }
         }
@@ -353,19 +397,19 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           : chatWithUser
       ))
 
-      if (socketRef.current) {
-        socketRef.current.emit('message:sent', {
-          chatId,
-          message: data.message,
-          senderId: user?._id
-        })
-      }
+      // Don't emit 'message:sent' - worker already handles WebSocket delivery
+      // This prevents duplicate messages
       
     } catch (error) {
       console.error("Error sending message:", error)
       throw error
     }
   }, [user?._id])
+
+  const sendMessage = useCallback(async (chatId: string, text: string, image?: File) => {
+    // Queue message through worker for better performance
+    queueMessage({ chatId, text, image });
+  }, [queueMessage])
 
   const createChat = useCallback(async (otherUserId: string): Promise<{ chatId: string }> => {
     const { data } = await chatApi.post<{ chatId: string; message?: string }>("/api/v1/chat/new", {

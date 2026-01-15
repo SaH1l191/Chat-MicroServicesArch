@@ -5,7 +5,7 @@ import { Message } from "../models/Message";
 import axios from "axios";
 import dotenv from 'dotenv'
 import { io, userSocketMap, viewingChatMap } from "../socket/socket";
-import { IMessage } from "../models/Message";
+import { publishToQueue } from "../config/rabbitmq";
 dotenv.config()
 
 export const createNewChat = async (req: AuthRequest, res: Response) => {
@@ -147,80 +147,44 @@ export const sendMessage = async (req: AuthRequest, res: Response) => {
         if (!otherUserId) {
             return res.status(403).json({ message: "No other user found in this chat" })
         }
-        //socket here 
-        let messageData: any
-        messageData = {
+
+        // Prepare message payload for worker
+        let messagePayload: any = {
             chatId: chatId,
-            sender: senderId,
+            senderId: senderId.toString(),
             seen: false,
             seenAt: undefined
         }
+
         if (imageFile) {
-            messageData.image = {
+            messagePayload.image = {
                 url: imageFile.path,
                 publicId: imageFile.filename
             }
-            messageData.messageType = "image"
-            messageData.text = text || ""
+            messagePayload.messageType = "image"
+            messagePayload.text = text || ""
         } else {
-            messageData.text = text;
-            messageData.messageType = "text"
-            messageData.image = undefined
+            messagePayload.text = text;
+            messagePayload.messageType = "text"
         }
-        const message = new Message(messageData)
-        const savedMessage: IMessage = await message.save()
-        const latestMessageText = imageFile ? "📷 Image" : text
-        const updatedChat = await Chat.findByIdAndUpdate(chatId, {
-            latestMessage: {
-                text: latestMessageText,
-                sender: senderId,
-            },
-            updatedAt: new Date()
-        }, { new: true })
 
+        // Publish to queue - worker will handle everything
+        await publishToQueue(messagePayload);
 
+        // Return immediately - worker handles storage, delivery, and notifications
+        // Fetch current messages for response
         const messages = await Message.find({ chatId }).sort({ createdAt: 1 })
+        const updatedChat = await Chat.findById(chatId)
 
-        io.to(`chat:${chatId}`).emit('message:new', {
-            message: savedMessage,
-            chatId,
-            senderId
-        })
-
-        // Notify receiver to refresh their chat list (for new chats or when they're not aware of the chat)
-        const receiverSocketId = userSocketMap[otherUserId.toString()]
-        if (receiverSocketId) {
-            io.to(receiverSocketId).emit('chat:refresh', {
-                chatId,
-                message: savedMessage
-            })
-        }
-
-        // receiver is online +  viewing
-        const receiverViewingChat = viewingChatMap[otherUserId.toString()]
-
-        // Check if receiver is online +  viewing => mark seen immediately
-        if (receiverSocketId && receiverViewingChat === chatId) {
-            //each socket has its room set 
-            const receiverSocket = io.sockets.sockets.get(receiverSocketId)
-            if (receiverSocket) {
-                const isInRoom = Array.from(receiverSocket.rooms).includes(`chat:${chatId}`)
-                if (isInRoom) {
-                    await Message.findByIdAndUpdate(savedMessage._id, {
-                        seen: true,
-                        seenAt: new Date()
-                    })
-                    savedMessage.seen = true
-                    savedMessage.seenAt = new Date()
-                    io.to(`chat:${chatId}`).emit('message:read', {
-                        chatId,
-                        messageIds: [savedMessage._id.toString()]
-                    })
-                }
-            }
-        }
         return res.status(201).json({
-            message: savedMessage,
+            message: {
+                chatId,
+                sender: senderId,
+                text: messagePayload.text,
+                image: messagePayload.image,
+                messageType: messagePayload.messageType,
+                seen: false
+            },
             messages,
             chat: updatedChat,
             sender: senderId

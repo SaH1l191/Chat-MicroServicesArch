@@ -18,6 +18,7 @@ const Message_1 = require("../models/Message");
 const axios_1 = __importDefault(require("axios"));
 const dotenv_1 = __importDefault(require("dotenv"));
 const socket_1 = require("../socket/socket");
+const rabbitmq_1 = require("../config/rabbitmq");
 dotenv_1.default.config();
 const createNewChat = (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     var _a;
@@ -142,75 +143,40 @@ const sendMessage = (req, res) => __awaiter(void 0, void 0, void 0, function* ()
         if (!otherUserId) {
             return res.status(403).json({ message: "No other user found in this chat" });
         }
-        //socket here 
-        let messageData;
-        messageData = {
+        // Prepare message payload for worker
+        let messagePayload = {
             chatId: chatId,
-            sender: senderId,
+            senderId: senderId.toString(),
             seen: false,
             seenAt: undefined
         };
         if (imageFile) {
-            messageData.image = {
+            messagePayload.image = {
                 url: imageFile.path,
                 publicId: imageFile.filename
             };
-            messageData.messageType = "image";
-            messageData.text = text || "";
+            messagePayload.messageType = "image";
+            messagePayload.text = text || "";
         }
         else {
-            messageData.text = text;
-            messageData.messageType = "text";
-            messageData.image = undefined;
+            messagePayload.text = text;
+            messagePayload.messageType = "text";
         }
-        const message = new Message_1.Message(messageData);
-        const savedMessage = yield message.save();
-        const latestMessageText = imageFile ? "📷 Image" : text;
-        const updatedChat = yield Chat_1.Chat.findByIdAndUpdate(chatId, {
-            latestMessage: {
-                text: latestMessageText,
-                sender: senderId,
-            },
-            updatedAt: new Date()
-        }, { new: true });
+        // Publish to queue - worker will handle everything
+        yield (0, rabbitmq_1.publishToQueue)(messagePayload);
+        // Return immediately - worker handles storage, delivery, and notifications
+        // Fetch current messages for response
         const messages = yield Message_1.Message.find({ chatId }).sort({ createdAt: 1 });
-        socket_1.io.to(`chat:${chatId}`).emit('message:new', {
-            message: savedMessage,
-            chatId,
-            senderId
-        });
-        // Notify receiver to refresh their chat list (for new chats or when they're not aware of the chat)
-        const receiverSocketId = socket_1.userSocketMap[otherUserId.toString()];
-        if (receiverSocketId) {
-            socket_1.io.to(receiverSocketId).emit('chat:refresh', {
-                chatId,
-                message: savedMessage
-            });
-        }
-        // receiver is online +  viewing
-        const receiverViewingChat = socket_1.viewingChatMap[otherUserId.toString()];
-        // Check if receiver is online +  viewing => mark seen immediately
-        if (receiverSocketId && receiverViewingChat === chatId) {
-            //each socket has its room set 
-            const receiverSocket = socket_1.io.sockets.sockets.get(receiverSocketId);
-            if (receiverSocket) {
-                const isInRoom = Array.from(receiverSocket.rooms).includes(`chat:${chatId}`);
-                if (isInRoom) {
-                    yield Message_1.Message.findByIdAndUpdate(savedMessage._id, {
-                        seen: true,
-                        seenAt: new Date()
-                    });
-                    savedMessage.seen = true;
-                    savedMessage.seenAt = new Date();
-                    socket_1.io.to(`chat:${chatId}`).emit('message:read', {
-                        chatId,
-                        messageIds: [savedMessage._id.toString()]
-                    });
-                }
-            }
-        }
+        const updatedChat = yield Chat_1.Chat.findById(chatId);
         return res.status(201).json({
-            message: savedMessage,
+            message: {
+                chatId,
+                sender: senderId,
+                text: messagePayload.text,
+                image: messagePayload.image,
+                messageType: messagePayload.messageType,
+                seen: false
+            },
             messages,
             chat: updatedChat,
             sender: senderId

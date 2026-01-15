@@ -5,6 +5,8 @@ import chatRoutes from './routes/route'
 import cookieParser from 'cookie-parser'
 import cors from 'cors'
 import { app, server } from './socket/socket'
+import { connectRabbitMq } from './config/rabbitmq'
+import { startMessageWorker } from './workers/messageWorker'
 dotenv.config()
 
 
@@ -21,7 +23,15 @@ app.use(cors({
 app.use(express.json())
 app.use(cookieParser())
 app.use('/api/v1', chatRoutes)
+
+
 connectDb()
+connectRabbitMq().then(() => {
+  startMessageWorker()
+  console.log('Message worker started')
+}).catch((error) => {
+  console.error('Failed to start message worker:', error)
+})
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {

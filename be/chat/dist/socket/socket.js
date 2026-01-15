@@ -87,10 +87,8 @@ io.on('connection', (socket) => {
         const { chatId, userId } = data;
         socket.to(`chat:${chatId}`).emit('typing:status', { chatId, userId, isTyping: false });
     });
-    socket.on('message:sent', (data) => {
-        const { chatId, message, senderId } = data;
-        io.to(`chat:${chatId}`).emit('message:new', { message, chatId, senderId });
-    });
+    // Removed 'message:sent' handler - worker now handles WebSocket delivery
+    // This prevents duplicate message emissions
     socket.on('message:read', (data) => __awaiter(void 0, void 0, void 0, function* () {
         const { chatId, messageIds } = data;
         const userId = socket.handshake.query.userId;

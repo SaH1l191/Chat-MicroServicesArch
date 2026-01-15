@@ -126,9 +126,12 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
         ) : messageList.length > 0 ? (
           messageList.map((message: Message) => {
             const isOwnMessage = message.sender === currentUser?._id
+            // Use message._id as key (should be unique after deduplication)
+            // Add fallback for edge cases
+            const messageKey = message._id || `msg-${message.createdAt}-${message.sender}`
             return (
               <div
-                key={message._id}
+                key={messageKey}
                 className={cn(
                   "flex",
                   isOwnMessage ? "justify-end" : "justify-start"
@@ -171,7 +174,20 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
                     )}
                   >
                     <span>
-                      {format(new Date(message.createdAt), "HH:mm")}
+                      {(() => {
+                        if (!message.createdAt) return "--:--";
+                        try {
+                          const date = new Date(message.createdAt);
+                          if (isNaN(date.getTime())) {
+                            console.warn("Invalid date:", message.createdAt);
+                            return "--:--";
+                          }
+                          return format(date, "HH:mm");
+                        } catch (error) {
+                          console.error("Date formatting error:", error, message.createdAt);
+                          return "--:--";
+                        }
+                      })()}
                     </span>
                     {isOwnMessage && (
                       <span className={cn(
