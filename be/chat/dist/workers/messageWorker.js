@@ -25,7 +25,7 @@ const QUEUE_NAME = 'chat:messages';
  */
 const startMessageWorker = () => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const connectionUrl = process.env.Rabbitmq_URL || 'amqp://localhost:5672';
+        const connectionUrl = process.env.Rabbitmq_URL;
         const connection = yield amqplib_1.default.connect(connectionUrl);
         const channel = yield connection.createChannel();
         yield channel.assertQueue(QUEUE_NAME, { durable: true });

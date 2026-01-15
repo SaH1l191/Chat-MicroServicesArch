@@ -5,7 +5,6 @@ import { io, Socket } from "socket.io-client"
 import chatApi from "@/lib/chatApi"
 import api from "@/lib/axios"
 import { useUser } from "@/lib/queries/user"
-import { useMessageWorker } from "@/hooks/useMessageWorker"
 
 // Types
 export interface ChatUser {
@@ -318,17 +317,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [user?._id, fetchChats])
 
-  // Message worker for queuing messages off main thread
-  const { queueMessage } = useMessageWorker(
-    async (queuedMessage) => {
-      // Process message from worker queue
-      await handleSendMessage(queuedMessage.chatId, queuedMessage.text || '', queuedMessage.image);
-    },
-    (error) => {
-      console.error("Message worker error:", error);
-    }
-  );
-
   const handleSendMessage = useCallback(async (chatId: string, text: string, image?: File) => {
     if (!chatId || (!text.trim() && !image)) return
 
@@ -406,9 +394,45 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     }
   }, [user?._id])
 
+  // Simple, sequential in-memory queue to decouple UI events from API processing.
+  // This replaces the old Web Worker based `useMessageWorker` without adding complexity.
+  const messageQueueRef = useRef<Array<{ chatId: string; text?: string; image?: File }>>([])
+  const isProcessingQueueRef = useRef(false)
+
+  const processMessageQueue = useCallback(async () => {
+    if (isProcessingQueueRef.current) return
+    isProcessingQueueRef.current = true
+
+    try {
+      while (messageQueueRef.current.length > 0) {
+        const next = messageQueueRef.current.shift()
+        if (!next) continue
+
+        try {
+          await handleSendMessage(next.chatId, next.text || "", next.image)
+        } catch (error) {
+          console.error("Error processing queued message:", error)
+          // keep draining the queue even if one send fails
+        }
+      }
+    } finally {
+      isProcessingQueueRef.current = false
+    }
+  }, [handleSendMessage])
+
+  const queueMessage = useCallback(
+    (message: { chatId: string; text?: string; image?: File }) => {
+      messageQueueRef.current.push(message)
+      // Schedule processing after the current call stack to keep UI responsive.
+      setTimeout(() => {
+        void processMessageQueue()
+      }, 0)
+    },
+    [processMessageQueue]
+  )
+
   const sendMessage = useCallback(async (chatId: string, text: string, image?: File) => {
-    // Queue message through worker for better performance
-    queueMessage({ chatId, text, image });
+    queueMessage({ chatId, text, image })
   }, [queueMessage])
 
   const createChat = useCallback(async (otherUserId: string): Promise<{ chatId: string }> => {
