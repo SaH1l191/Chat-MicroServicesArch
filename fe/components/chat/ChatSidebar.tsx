@@ -230,14 +230,14 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
               onClick={handleSettings}
             >
               <div className="h-9 w-9 rounded-full bg-primary/10 flex items-center justify-center">
-                <span className="text-sm font-medium">
+                <span className="text-sm font-medium ">
                   {currentUser.name?.charAt(0)?.toUpperCase() ||
                     currentUser.email?.charAt(0)?.toUpperCase() ||
                     "?"}
                 </span>
               </div>
               <div className="flex flex-col items-end">
-                <span className="text-sm font-medium truncate max-w-40">
+                <span className="text-sm font-medium truncate max-w-40 text-left justify-start">
                   {currentUser.name || currentUser.email}
                 </span>
                 {currentUser.name && (
@@ -248,10 +248,19 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
               </div>
             </div>
 
+            <div
+              className={cn(
+                "flex items-center gap-3 p-3 rounded-lg  transition-colors",
+               
+              )} 
+            >
+              <Button onClick={async() => logout.mutate()} className="w-fit cursor-pointer">Logout</Button>
+            </div>
+
             {settingsOpen && (
-              <div className="absolute bottom-20 right-4 w-64 rounded-md border bg-popover p-3 shadow-lg z-10">
-                <form className="space-y-2" onSubmit={handleSubmitName}>
-                  <div>
+              <div className="absolute gap-y-4 bottom-20 right-4 w-64 rounded-md border bg-popover p-3 shadow-lg z-10">
+                <form className="space-y-4" onSubmit={handleSubmitName}>
+                  <div className="space-y-4">
                     <p className="text-xs font-medium text-muted-foreground">
                       Change display name
                     </p>
@@ -261,6 +270,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
                       placeholder="Enter new name"
                       autoFocus
                     />
+                    <hr className="" /> 
                     <div className="flex justify-end gap-2 pt-1">
                       <Button
                         type="button"
@@ -270,6 +280,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
                       >
                         Cancel
                       </Button>
+                      
                       <Button
                         type="submit"
                         size="sm"
@@ -279,13 +290,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
                       </Button>
                     </div>
                   </div>
-                  <hr className="" />
-                  <div>
-                    <Button type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => logout.mutate()}  >Log out</Button>
-                  </div>
+                  
                 </form>
 
               </div>

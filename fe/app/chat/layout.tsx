@@ -55,9 +55,9 @@ export default function ChatLayout({
   const isUserTyping = selectedChatId ? typingStatus[selectedChatId] || false : false
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen overflow-hidden">
       {/* Sidebar */}
-      <div className="w-80 shrink-0 ">
+      <div className="w-80 shrink-0 h-full overflow-hidden">
         <ChatSidebar
           selectedChatId={selectedChatId}
           onSelectChat={handleSelectChat}
@@ -69,8 +69,8 @@ export default function ChatLayout({
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col overflow-y-auto">
-        <div className="flex-1 flex flex-col ">
+      <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+        <div className="flex-1 flex flex-col min-h-0">
           <ChatInterface chatId={selectedChatId} selectedUser={selectedUser} onlineUsers={onlineUsers}
             isUserTyping={isUserTyping} />
         </div>

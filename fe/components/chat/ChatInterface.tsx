@@ -92,7 +92,7 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0">
       {/* Header of the person we are chatting with  */}
       <div className="p-4 border-b bg-background  top-0 sticky">
         <div className="flex items-center gap-3">
@@ -118,7 +118,10 @@ export function ChatInterface({ chatId, selectedUser, onlineUsers, isUserTyping 
       </div>
 
       {/* Messages */}
-      <div ref={messagesContainerRef} className="flex-1 overflow-y-hidden p-4 space-y-4 h-full">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto p-4 space-y-4"
+      >
         {isLoading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-6 w-6 animate-spin" />
