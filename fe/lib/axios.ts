@@ -40,9 +40,9 @@ api.interceptors.response.use(
                 return api(originalRequest)
             } catch (refreshError) {
                 isRefreshing = false
-                if (window.location.pathname !== "/login") {
-                    window.location.href = "/login"
-                }
+                // if (window.location.pathname !== "/login") {
+                //     window.location.href = "/login"
+                // }
                 return Promise.reject(refreshError)
             }
         }

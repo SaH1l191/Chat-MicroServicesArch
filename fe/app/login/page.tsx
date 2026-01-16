@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Pencil } from 'lucide-react'
+import { Pencil, Shield } from 'lucide-react'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,7 +28,7 @@ export default function Component() {
             })
             toast.success(`${data.message}`)
             setIsVerifying(true)
-        } catch (err:any ) {
+        } catch (err: any) {
             toast.message(`${err?.message}`)
         } finally {
             setIsLoading(false)
@@ -69,81 +69,187 @@ export default function Component() {
         }
     }
 
-    return (
-        <div className="flex justify-center items-center min-h-screen">
-            <div className="relative w-[400px]">
+    const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+        e.preventDefault()
+        const pastedData = e.clipboardData
+            .getData("text")
+            .replace(/\s/g, "")
+            .slice(0, 8)
+        if (!/^\d+$/.test(pastedData)) return
+        const newOtp = pastedData.split("")
+        setOtp(prev => {
+            const filled = [...prev]
+            newOtp.forEach((char, i) => {
+                filled[i] = char
+            })
+            return filled
+        })
+        const lastIndex = Math.min(newOtp.length - 1, 7)
+        document.getElementById(`otp-${lastIndex}`)?.focus()
+    }
 
-                <div className="space-y-4">
-                    <div className="space-y-2">
-                        <Label htmlFor="email">Email</Label>
-                        <Input
-                            id="email"
-                            type="email"
-                            placeholder="Enter your email"
-                            value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            disabled={isVerifying || isLoading}
-                        />
+
+    return (
+        <div className="flex justify-center items-center min-h-screen bg-gradient-to-br from-background via-background to-muted/20 p-4">
+            {/* Background decoration */}
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+            </div>
+
+            <div className="relative w-full max-w-md z-10">
+                {/* Main login card */}
+                <div className={`bg-card/80 backdrop-blur-sm border border-border/50 rounded-2xl shadow-xl p-8 transition-all duration-500 ${isVerifying ? 'opacity-0 scale-95 pointer-events-none' : 'opacity-100 scale-100'}`}>
+                    <div className="space-y-6">
+                        {/* Header */}
+                        <div className="text-center space-y-2">
+                            {/* <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                                <Mail className="w-8 h-8 text-primary" />
+                            </div> */}
+                            <h1 className="text-3xl font-bold tracking-tight">Welcome back</h1>
+                            <p className="text-muted-foreground">Enter your email to receive a verification code</p>
+                        </div>
+
+                        {/* Email input section */}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="email" className="text-sm font-medium">Email address</Label>
+                                <div className="relative">
+                                    {/* <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" /> */}
+                                    <Input
+                                        id="email"
+                                        type="email"
+                                        placeholder="name@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
+                                        disabled={isVerifying || isLoading}
+                                        className="pl-10 h-12 text-base transition-all focus:ring-2 focus:ring-primary/20"
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && email.trim() && !isLoading) {
+                                                handleSendOtp()
+                                            }
+                                        }}
+                                    />
+                                </div>
+                            </div>
+                            <Button
+                                onClick={handleSendOtp}
+                                disabled={!email.trim() || isVerifying || isLoading}
+                                className="w-full h-12 text-base font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                                size="lg"
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2"></div>
+                                        Sending code...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Pencil className="mr-2 h-4 w-4" />
+                                        Send verification code
+                                    </>
+                                )}
+                            </Button>
+                        </div>
                     </div>
-                    <Button
-                        variant="link"
-                        className="h-auto p-0 text-sm font-normal"
-                        onClick={handleSendOtp}
-                        disabled={!email.trim() || isVerifying || isLoading}
-                    >
-                        <Pencil className="mr-2 h-3.5 w-3.5" />
-                        {isLoading ? "Sending..." : "Send OTP"}
-                    </Button>
                 </div>
 
+                {/* OTP Verification Modal */}
                 {isVerifying && (
-                    <div
-                        className="z-10 absolute top-1/2 left-1/2   space-y-4 rounded-lg border bg-background p-6 shadow-lg"
-                        style={{
-                            transform: "translate(-50%, -50%)",
-                            animation: "slide-in 300ms cubic-bezier(0, 0, 0.2, 1)",
-                        }}
-                    >
-                        <h2 className="text-lg font-semibold text-center">Verify your email</h2>
-                        <p className="text-sm text-muted-foreground text-center">
-                            Enter the 8-digit code sent to {email}
-                        </p>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="otp-0">Verification code</Label>
-                            <div className="flex justify-between gap-2">
-                                {otp.map((digit, index) => (
-                                    <Input
-                                        key={index}
-                                        id={`otp-${index}`}
-                                        type="text"
-                                        inputMode="text" // allow letters
-                                        maxLength={1}
-                                        className="w-12 h-12 text-center text-2xl"
-                                        value={digit}
-                                        onChange={(e) => handleOtpChange(index, e.target.value.trim())} // trim each char
-                                        disabled={isLoading}
-                                    />
-                                ))}
-                            </div>
-                        </div>
-
-                        <div className="flex justify-end space-x-2">
-                            <Button
-                                variant="outline"
-                                onClick={() => {
+                    <>
+                        {/* Backdrop */}
+                        <div
+                            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-20 animate-in fade-in duration-300"
+                            onClick={() => {
+                                if (!isLoading) {
                                     setIsVerifying(false)
                                     setOtp(["", "", "", "", "", "", "", ""])
-                                }}
-                                disabled={isLoading}
+                                }
+                            }}
+                        />
+
+                        {/* Modal */}
+                        <div className="fixed inset-0 z-30 flex items-center justify-center p-4">
+                            <div
+                                className="bg-card border border-border rounded-2xl shadow-2xl p-8 w-full max-w-md space-y-6 animate-in zoom-in-95 duration-300"
+                                onClick={(e) => e.stopPropagation()}
                             >
-                                Cancel
-                            </Button>
-                            <Button onClick={handleVerify} disabled={isLoading}>
-                                {isLoading ? "Verifying..." : "Verify"}
-                            </Button>
+                                {/* Header */}
+                                <div className="text-center space-y-2">
+                                    <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 mb-4">
+                                        <Shield className="w-8 h-8 text-primary" />
+                                    </div>
+                                    <h2 className="text-2xl font-bold tracking-tight">Verify your email</h2>
+                                    <p className="text-sm text-muted-foreground">
+                                        Enter the 8-digit code sent to
+                                    </p>
+                                    <p className="text-sm font-medium text-foreground break-all">
+                                        {email}
+                                    </p>
+                                </div>
+
+                                {/* OTP Input */}
+                                <div className="space-y-3">
+                                    <Label htmlFor="otp-0" className="text-sm font-medium">Verification code</Label>
+                                    <div className="flex justify-between gap-2">
+                                        {otp.map((digit, index) => (
+                                            <Input
+                                                key={index}
+                                                id={`otp-${index}`}
+                                                type="text"
+                                                inputMode="text"
+                                                maxLength={1}
+                                                className="w-14 h-14 text-center text-2xl font-semibold transition-all duration-200 focus:ring-2 focus:ring-primary/20 focus:scale-105 border-2"
+                                                value={digit}
+                                                onChange={(e) => {
+                                                    const value = e.target.value.trim().slice(0, 1)
+                                                    handleOtpChange(index, value)
+                                                }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Backspace' && !digit && index > 0) {
+                                                        const prevInput = document.getElementById(`otp-${index - 1}`)
+                                                        if (prevInput) prevInput.focus()
+                                                    }
+                                                }}
+                                                disabled={isLoading}
+                                                autoFocus={index === 0}
+                                                onPaste={handleOtpPaste}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-3 pt-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => {
+                                            setIsVerifying(false)
+                                            setOtp(["", "", "", "", "", "", "", ""])
+                                        }}
+                                        disabled={isLoading}
+                                        className="flex-1 h-11"
+                                    >
+                                        Cancel
+                                    </Button>
+                                    <Button
+                                        onClick={handleVerify}
+                                        disabled={isLoading}
+                                        className="flex-1 h-11 font-medium shadow-md hover:shadow-lg transition-all duration-200"
+                                    >
+                                        {isLoading ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin mr-2"></div>
+                                                Verifying...
+                                            </>
+                                        ) : (
+                                            "Verify"
+                                        )}
+                                    </Button>
+                                </div>
+                            </div>
                         </div>
-                    </div>
+                    </>
                 )}
             </div>
         </div>

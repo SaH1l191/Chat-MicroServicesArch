@@ -6,7 +6,8 @@ import { Button } from "@/components/ui/button"
 import { useChat, type ChatUser } from "@/providers/ChatProvider"
 import { useUser, useUpdateUserName, useLogout } from "@/lib/queries/user"
 import { Search, MessageSquare, Loader2 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
+import { useRouter } from "next/navigation"
 
 interface ChatSidebarProps {
   selectedChatId: string | null
@@ -33,6 +34,7 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
     setSettingsOpen((prev) => !prev)
   }
 
+  const router = useRouter()
   const handleSubmitName = async (e: React.FormEvent) => {
     e.preventDefault()
     const trimmed = newName.trim()
@@ -254,7 +256,9 @@ export function ChatSidebar({ selectedChatId, onSelectChat, onlineUsers, selecte
                
               )} 
             >
-              <Button onClick={async() => logout.mutate()} className="w-fit cursor-pointer">Logout</Button>
+              <Button onClick={async() => logout.mutate(undefined,{
+                onSuccess : ()=>router.push("/")
+              })} className="w-fit cursor-pointer">Logout</Button>
             </div>
 
             {settingsOpen && (
